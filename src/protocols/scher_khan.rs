@@ -69,7 +69,7 @@ impl ScherKhanDecoder {
             crc_valid: true,
             data,
             data_count_bit: bit_count,
-            encoder_capable: false,
+            encoder_capable: true,
             extra: None,
             protocol_display_name: None,
         }
@@ -195,11 +195,57 @@ impl ProtocolDecoder for ScherKhanDecoder {
     }
 
     fn supports_encoding(&self) -> bool {
-        false
+        true
     }
 
-    fn encode(&self, _decoded: &DecodedSignal, _button: u8) -> Option<Vec<LevelDuration>> {
-        None // Scher-Khan decode-only in protopirate
+    fn encode(&self, decoded: &DecodedSignal, button: u8) -> Option<Vec<LevelDuration>> {
+        let mut data = decoded.data;
+        let mut cnt = decoded.counter.unwrap_or(0);
+        let bit_count = decoded.data_count_bit;
+
+        // Note: 57-bit MAGIC CODE PRO/PRO2 encoding omitted due to missing static decryption tables
+        // (`sk_pi_bytes`, `sk_pro1_encoded`, etc.) and logic overhead complexity not fully defined in context.
+        if bit_count == 51 {
+            cnt = cnt.wrapping_add(1);
+            let upper = data & 0x7FFFFFFF0000;
+            let upper_mod = (upper & !(0x0F << 24)) | ((button as u64 & 0x0F) << 24);
+            data = upper_mod | (cnt as u64 & 0xFFFF);
+        } else if bit_count == 57 {
+            return None; // 57-bit PRO encode not supported yet
+        }
+
+        let mut signal = Vec::with_capacity(256);
+
+        // Preamble: 6x pairs of short
+        for _ in 0..6 {
+            signal.push(LevelDuration::new(true, TE_SHORT));
+            signal.push(LevelDuration::new(false, TE_SHORT));
+        }
+
+        // Header: 3x pairs of short*2
+        for _ in 0..3 {
+            signal.push(LevelDuration::new(true, TE_SHORT * 2));
+            signal.push(LevelDuration::new(false, TE_SHORT * 2));
+        }
+
+        // Start bit: 1x pair of short
+        signal.push(LevelDuration::new(true, TE_SHORT));
+        signal.push(LevelDuration::new(false, TE_SHORT));
+
+        for i in (0..bit_count).rev() {
+            if (data >> i) & 1 == 1 {
+                signal.push(LevelDuration::new(true, TE_LONG));
+                signal.push(LevelDuration::new(false, TE_LONG));
+            } else {
+                signal.push(LevelDuration::new(true, TE_SHORT));
+                signal.push(LevelDuration::new(false, TE_SHORT));
+            }
+        }
+
+        // End: 1500us high
+        signal.push(LevelDuration::new(true, TE_SHORT * 2));
+
+        Some(signal)
     }
 }
 

@@ -75,6 +75,12 @@ mod ford_v1;
 mod ford_v2;
 mod ford_v3;
 mod kia_v7;
+mod princeton;
+mod psa2;
+mod revers_rb2;
+mod roger;
+mod secplus_v1;
+mod secplus_v2;
 
 
 pub use common::DecodedSignal;
@@ -166,6 +172,12 @@ impl ProtocolRegistry {
             Box::new(ford_v2::FordV2Decoder::new()),
             Box::new(ford_v3::FordV3Decoder::new()),
             Box::new(kia_v7::KiaV7Decoder::new()),
+            Box::new(princeton::PrincetonDecoder::new()),
+            Box::new(psa2::Psa2Decoder::new()),
+            Box::new(revers_rb2::ReversRb2Decoder::new()),
+            Box::new(roger::RogerDecoder::new()),
+            Box::new(secplus_v1::SecPlusV1Decoder::new()),
+            Box::new(secplus_v2::SecPlusV2Decoder::new()),
             Box::new(kinggates_stylo_4k::KingGatesStylo4kDecoder::new()),
             Box::new(landrover_rke::LandRoverRkeDecoder::new()),
             Box::new(legrand::LegrandDecoder::new()),
