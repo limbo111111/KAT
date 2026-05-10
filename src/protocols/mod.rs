@@ -16,6 +16,16 @@
 //! not reused across protocols. Event conventions match the reference per protocol (e.g. Kia V5
 //! opposite polarity; Fiat/Ford/common use Flipper-style: level ? ShortLow : ShortHigh).
 
+mod alutech_at_4n;
+mod ansonic;
+mod beninca_arc;
+mod bett;
+mod bin_raw;
+mod bmw_cas4;
+mod came;
+mod came_atomo;
+mod came_twee;
+mod chamberlain_code;
 mod common;
 pub mod keeloq_common;
 mod keeloq;
@@ -116,6 +126,16 @@ impl ProtocolRegistry {
             Box::new(kia_v5::KiaV5Decoder::new()),
             Box::new(kia_v6::KiaV6Decoder::new()),
             // VAG before Ford/Subaru so 500/1000µs VAG streams decode as VAG (ProtoPirate order has VAG after Ford/Subaru but Flipper likely feeds all decoders; KAT uses first-match so VAG must be tried earlier)
+            Box::new(alutech_at_4n::AlutechAt4nDecoder::new()),
+            Box::new(ansonic::AnsonicDecoder::new()),
+            Box::new(beninca_arc::BenincaArcDecoder::new()),
+            Box::new(bett::BettDecoder::new()),
+            Box::new(bin_raw::BinRawDecoder::new()),
+            Box::new(bmw_cas4::BmwCas4Decoder::new()),
+            Box::new(came::CameDecoder::new()),
+            Box::new(came_atomo::CameAtomoDecoder::new()),
+            Box::new(came_twee::CameTweeDecoder::new()),
+            Box::new(chamberlain_code::ChamberlainCodeDecoder::new()),
             Box::new(vag::VagDecoder::new()),
             Box::new(ford_v0::FordV0Decoder::new()),
             Box::new(subaru::SubaruDecoder::new()),
