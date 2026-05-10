@@ -40,6 +40,15 @@ mod fiat_v1;
 mod suzuki;
 mod scher_khan;
 mod star_line;
+mod kinggates_stylo_4k;
+mod landrover_rke;
+mod legrand;
+mod linear;
+mod linear_delta3;
+mod magellan;
+mod marantec;
+mod marantec24;
+mod mastercode;
 mod psa;
 mod mazda_v0;
 mod mitsubishi_v0;
@@ -134,6 +143,15 @@ impl ProtocolRegistry {
             Box::new(ford_v2::FordV2Decoder::new()),
             Box::new(ford_v3::FordV3Decoder::new()),
             Box::new(kia_v7::KiaV7Decoder::new()),
+            Box::new(kinggates_stylo_4k::KingGatesStylo4kDecoder::new()),
+            Box::new(landrover_rke::LandRoverRkeDecoder::new()),
+            Box::new(legrand::LegrandDecoder::new()),
+            Box::new(linear::LinearDecoder::new()),
+            Box::new(linear_delta3::LinearDelta3Decoder::new()),
+            Box::new(magellan::MagellanDecoder::new()),
+            Box::new(marantec::MarantecDecoder::new()),
+            Box::new(marantec24::Marantec24Decoder::new()),
+            Box::new(mastercode::MastercodeDecoder::new()),
         ];
 
         Self { decoders }
