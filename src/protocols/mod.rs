@@ -44,6 +44,12 @@ mod psa;
 mod mazda_v0;
 mod mitsubishi_v0;
 mod porsche_touareg;
+mod hyundai_kia_rio;
+mod santa_fe;
+mod ford_v1;
+mod ford_v2;
+mod ford_v3;
+mod kia_v7;
 
 pub use common::DecodedSignal;
 
@@ -122,6 +128,12 @@ impl ProtocolRegistry {
             Box::new(mazda_v0::MazdaV0Decoder::new()),
             Box::new(mitsubishi_v0::MitsubishiV0Decoder::new()),
             Box::new(porsche_touareg::PorscheTouaregDecoder::new()),
+            Box::new(hyundai_kia_rio::HyundaiKiaRioDecoder::new()),
+            Box::new(santa_fe::SantaFeDecoder::new()),
+            Box::new(ford_v1::FordV1Decoder::new()),
+            Box::new(ford_v2::FordV2Decoder::new()),
+            Box::new(ford_v3::FordV3Decoder::new()),
+            Box::new(kia_v7::KiaV7Decoder::new()),
         ];
 
         Self { decoders }
