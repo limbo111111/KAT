@@ -487,7 +487,7 @@ impl VagDecoder {
         let btn = decoded.button.unwrap_or(0);
         let cnt = decoded.counter.unwrap_or(0) as u32;
         let type_byte = (decoded.data >> 56) as u8;
-        let btn_byte = btn;
+        let btn_byte = Self::btn_to_byte(btn, 1);
         let dispatch = Self::get_dispatch_byte(btn_byte, 1);
 
         // Build plaintext block
