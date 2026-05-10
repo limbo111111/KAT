@@ -3,7 +3,6 @@
 //! Aligned with Flipper-ARF reference: `lib/subghz/protocols/landrover_rke.c`.
 
 use super::{DecodedSignal, ProtocolDecoder, ProtocolTiming};
-use crate::duration_diff;
 use crate::radio::demodulator::LevelDuration;
 
 const TE_SHORT: u32 = 400; // Actually bit parts are 400/600/300/700 but let's use base
