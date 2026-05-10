@@ -32,8 +32,10 @@ mod kia_v2;
 mod kia_v3_v4;
 mod kia_v5;
 mod kia_v6;
+mod somfy_telis;
 mod subaru;
 mod ford_v0;
+mod treadmill37;
 mod vag;
 mod fiat_v0;
 mod fiat_v1;
@@ -115,8 +117,10 @@ impl ProtocolRegistry {
             Box::new(kia_v5::KiaV5Decoder::new()),
             Box::new(kia_v6::KiaV6Decoder::new()),
             // VAG before Ford/Subaru so 500/1000µs VAG streams decode as VAG (ProtoPirate order has VAG after Ford/Subaru but Flipper likely feeds all decoders; KAT uses first-match so VAG must be tried earlier)
+            Box::new(treadmill37::Treadmill37Decoder::new()),
             Box::new(vag::VagDecoder::new()),
             Box::new(ford_v0::FordV0Decoder::new()),
+            Box::new(somfy_telis::SomfyTelisDecoder::new()),
             Box::new(subaru::SubaruDecoder::new()),
             Box::new(fiat_v0::FiatV0Decoder::new()),
             Box::new(fiat_v1::FiatV1Decoder::new()),
