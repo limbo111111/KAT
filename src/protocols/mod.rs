@@ -26,6 +26,10 @@ mod keeloq_generic;
 pub mod aut64;
 #[allow(dead_code)]
 pub mod keys;
+mod intertechno_v3;
+mod keyfinder;
+mod jarolift;
+mod ido;
 mod kia_v0;
 mod kia_v1;
 mod kia_v2;
@@ -108,7 +112,11 @@ impl ProtocolRegistry {
     pub fn new() -> Self {
         let decoders: Vec<Box<dyn ProtocolDecoder>> = vec![
             // Kia protocols
-            Box::new(kia_v0::KiaV0Decoder::new()),
+            Box::new(intertechno_v3::IntertechnoV3Decoder::new()),
+        Box::new(keyfinder::KeyFinderDecoder::new()),
+        Box::new(jarolift::JaroliftDecoder::new()),
+        Box::new(ido::IDoDecoder::new()),
+        Box::new(kia_v0::KiaV0Decoder::new()),
             Box::new(kia_v1::KiaV1Decoder::new()),
             Box::new(kia_v2::KiaV2Decoder::new()),
             Box::new(kia_v3_v4::KiaV3V4Decoder::new()),
