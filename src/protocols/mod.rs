@@ -66,7 +66,7 @@ mod ford_v1;
 mod ford_v2;
 mod ford_v3;
 mod kia_v7;
-mod honda_static;
+
 
 pub use common::DecodedSignal;
 
@@ -157,6 +157,15 @@ impl ProtocolRegistry {
             Box::new(ford_v2::FordV2Decoder::new()),
             Box::new(ford_v3::FordV3Decoder::new()),
             Box::new(kia_v7::KiaV7Decoder::new()),
+            Box::new(mazda_siemens::MazdaSiemensDecoder::new()),
+            Box::new(megacode::MegaCodeDecoder::new()),
+            Box::new(nero_radio::NeroRadioDecoder::new()),
+            Box::new(nero_sketch::NeroSketchDecoder::new()),
+            Box::new(nice_flo::NiceFloDecoder::new()),
+            Box::new(nice_flor_s::NiceFlorSDecoder::new()),
+            Box::new(phoenix_v2::PhoenixV2Decoder::new()),
+            Box::new(porsche_cayenne::PorscheCayenneDecoder::new()),
+            Box::new(power_smart::PowerSmartDecoder::new()),
             Box::new(honda_static::HondaStaticDecoder::new()),
         ];
 
