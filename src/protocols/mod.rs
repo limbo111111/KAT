@@ -68,6 +68,28 @@ mod mastercode;
 mod psa;
 mod mazda_v0;
 mod mitsubishi_v0;
+mod mazda_siemens;
+mod megacode;
+mod nero_radio;
+mod nero_sketch;
+mod nice_flo;
+mod nice_flor_s;
+mod phoenix_v2;
+mod porsche_cayenne;
+mod power_smart;
+mod honda_static;
+
+mod chrysler;
+mod clemsa;
+mod dickert_mahs;
+mod doitrand;
+mod dooya;
+mod elplast;
+mod faac_slh;
+mod feron;
+mod fiat_marelli;
+mod fiat_spa;
+
 mod porsche_touareg;
 mod hyundai_kia_rio;
 mod santa_fe;
@@ -81,7 +103,6 @@ mod revers_rb2;
 mod roger;
 mod secplus_v1;
 mod secplus_v2;
-
 
 pub use common::DecodedSignal;
 
@@ -142,6 +163,36 @@ impl ProtocolRegistry {
             // Kia protocols
             Box::new(intertechno_v3::IntertechnoV3Decoder::new()),
         Box::new(keyfinder::KeyFinderDecoder::new()),
+            Box::new(mazda_siemens::MazdaSiemensDecoder::new()),
+
+            Box::new(megacode::MegaCodeDecoder::new()),
+
+            Box::new(nero_radio::NeroRadioDecoder::new()),
+
+            Box::new(nero_sketch::NeroSketchDecoder::new()),
+
+            Box::new(nice_flo::NiceFloDecoder::new()),
+
+            Box::new(nice_flor_s::NiceFlorSDecoder::new()),
+
+            Box::new(phoenix_v2::PhoenixV2Decoder::new()),
+
+            Box::new(porsche_cayenne::PorscheCayenneDecoder::new()),
+
+            Box::new(power_smart::PowerSmartDecoder::new()),
+
+            Box::new(honda_static::HondaStaticDecoder::new()),
+
+            Box::new(chrysler::ChryslerDecoder::new()),
+            Box::new(clemsa::ClemsaDecoder::new()),
+            Box::new(dickert_mahs::DickertMahsDecoder::new()),
+            Box::new(doitrand::DoitrandDecoder::new()),
+            Box::new(dooya::DooyaDecoder::new()),
+            Box::new(elplast::ElplastDecoder::new()),
+            Box::new(faac_slh::FaacSlhDecoder::new()),
+            Box::new(feron::FeronDecoder::new()),
+            Box::new(fiat_marelli::FiatMarelliDecoder::new()),
+            Box::new(fiat_spa::FiatSpaDecoder::new()),
         Box::new(jarolift::JaroliftDecoder::new()),
         Box::new(ido::IDoDecoder::new()),
         Box::new(kia_v0::KiaV0Decoder::new()),
@@ -187,16 +238,16 @@ impl ProtocolRegistry {
             Box::new(marantec::MarantecDecoder::new()),
             Box::new(marantec24::Marantec24Decoder::new()),
             Box::new(mastercode::MastercodeDecoder::new()),
-            Box::new(mazda_siemens::MazdaSiemensDecoder::new()),
-            Box::new(megacode::MegaCodeDecoder::new()),
-            Box::new(nero_radio::NeroRadioDecoder::new()),
-            Box::new(nero_sketch::NeroSketchDecoder::new()),
-            Box::new(nice_flo::NiceFloDecoder::new()),
-            Box::new(nice_flor_s::NiceFlorSDecoder::new()),
-            Box::new(phoenix_v2::PhoenixV2Decoder::new()),
-            Box::new(porsche_cayenne::PorscheCayenneDecoder::new()),
-            Box::new(power_smart::PowerSmartDecoder::new()),
-            Box::new(honda_static::HondaStaticDecoder::new()),
+
+
+
+
+
+
+
+
+
+
         ];
 
         Self { decoders }
