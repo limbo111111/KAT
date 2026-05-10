@@ -195,3 +195,14 @@ pub mod buttons {
     pub const TRUNK: u8 = 0x04;
     pub const PANIC: u8 = 0x08;
 }
+
+/// Reverse bits in a key up to `count` length
+pub fn reverse_key(key: u64, count: usize) -> u64 {
+    let mut reversed = 0;
+    for i in 0..count {
+        if (key >> i) & 1 == 1 {
+            reversed |= 1 << (count - 1 - i);
+        }
+    }
+    reversed
+}
