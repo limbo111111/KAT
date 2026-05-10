@@ -21,6 +21,8 @@ const TE_DELTA: u32 = 100;
 const MIN_COUNT_BIT: usize = 144;
 const PREAMBLE_COUNT: u16 = 601;
 
+const KIA_V6_PREAMBLE_PAIRS_1: u32 = 640;
+const KIA_V6_PREAMBLE_PAIRS_2: u32 = 38;
 const XOR_MASK_LOW: u32 = 0x84AF25FB;
 const XOR_MASK_HIGH: u32 = 0x638766AB;
 
@@ -398,7 +400,7 @@ impl KiaV6Decoder {
         let mut signal = Vec::with_capacity(2000);
 
         // Two passes: 640 preamble pairs, then 38 preamble pairs
-        for &preamble_pairs in &[640u32, 38u32] {
+        for &preamble_pairs in &[KIA_V6_PREAMBLE_PAIRS_1, KIA_V6_PREAMBLE_PAIRS_2] {
             // Preamble: short/short pairs
             for _ in 0..preamble_pairs {
                 signal.push(LevelDuration::new(true, TE_SHORT));
