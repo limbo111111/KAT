@@ -17,7 +17,7 @@ const TE_SHORT: u32 = 250;
 const TE_LONG: u32 = 500;
 const TE_DELTA: u32 = 99;
 const MIN_COUNT_BIT: usize = 64;
-const PREAMBLE_COUNT: u16 = 350;
+const PREAMBLE_COUNT: u16 = 300;
 const GAP_TIME: u32 = 2000;
 const GAP_DELTA: u32 = 399;
 
