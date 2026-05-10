@@ -26,6 +26,18 @@ mod came;
 mod came_atomo;
 mod came_twee;
 mod chamberlain_code;
+mod hormann;
+mod honeywell_wdb;
+mod sheriff_cfm;
+mod gangqi;
+mod gate_tx;
+mod holtek;
+mod hay21;
+mod smc5326;
+mod holtek_ht12x;
+mod hollarm;
+mod somfy_keytis;
+mod honeywell;
 mod common;
 pub mod keeloq_common;
 mod keeloq;
@@ -247,6 +259,30 @@ impl ProtocolRegistry {
 
 
 
+
+            Box::new(hormann::HormannDecoder::new()),
+            Box::new(honeywell_wdb::HoneywellWdbDecoder::new()),
+            Box::new(sheriff_cfm::SheriffCfmDecoder::new()),
+            Box::new(gangqi::GangQiDecoder::new()),
+            Box::new(gate_tx::GateTxDecoder::new()),
+            Box::new(holtek::HoltekDecoder::new()),
+            Box::new(hay21::Hay21Decoder::new()),
+            Box::new(smc5326::Smc5326Decoder::new()),
+            Box::new(holtek_ht12x::HoltekHt12xDecoder::new()),
+            Box::new(hollarm::HollarmDecoder::new()),
+            Box::new(somfy_keytis::SomfyKeytisDecoder::new()),
+            Box::new(honeywell::HoneywellDecoder::new()),
+            Box::new(alutech_at_4n::AlutechAt4nDecoder::new()),
+            Box::new(ansonic::AnsonicDecoder::new()),
+            Box::new(beninca_arc::BenincaArcDecoder::new()),
+            Box::new(bett::BettDecoder::new()),
+            Box::new(bin_raw::BinRawDecoder::new()),
+            Box::new(bmw_cas4::BmwCas4Decoder::new()),
+            Box::new(came::CameDecoder::new()),
+            Box::new(came_atomo::CameAtomoDecoder::new()),
+            Box::new(came_twee::CameTweeDecoder::new()),
+            Box::new(chamberlain_code::ChamberlainCodeDecoder::new()),
+            Box::new(treadmill37::Treadmill37Decoder::new()),
 
         ];
 

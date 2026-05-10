@@ -167,7 +167,7 @@ impl ProtocolDecoder for RogerDecoder {
             data = ((serial as u64) << 12) | ((btn as u64) << 8) | 0x23;
         }
 
-        let mut signal = Vec::with_capacity((decoded.data_count_bit * 2));
+        let mut signal = Vec::with_capacity(decoded.data_count_bit * 2);
 
         for i in (0..decoded.data_count_bit).rev() {
             if (data >> i) & 1 == 1 {
