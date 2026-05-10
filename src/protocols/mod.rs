@@ -16,6 +16,16 @@
 //! not reused across protocols. Event conventions match the reference per protocol (e.g. Kia V5
 //! opposite polarity; Fiat/Ford/common use Flipper-style: level ? ShortLow : ShortHigh).
 
+mod alutech_at_4n;
+mod ansonic;
+mod beninca_arc;
+mod bett;
+mod bin_raw;
+mod bmw_cas4;
+mod came;
+mod came_atomo;
+mod came_twee;
+mod chamberlain_code;
 mod common;
 pub mod keeloq_common;
 mod keeloq;
@@ -26,20 +36,35 @@ mod keeloq_generic;
 pub mod aut64;
 #[allow(dead_code)]
 pub mod keys;
+mod intertechno_v3;
+mod keyfinder;
+mod jarolift;
+mod ido;
 mod kia_v0;
 mod kia_v1;
 mod kia_v2;
 mod kia_v3_v4;
 mod kia_v5;
 mod kia_v6;
+mod somfy_telis;
 mod subaru;
 mod ford_v0;
+mod treadmill37;
 mod vag;
 mod fiat_v0;
 mod fiat_v1;
 mod suzuki;
 mod scher_khan;
 mod star_line;
+mod kinggates_stylo_4k;
+mod landrover_rke;
+mod legrand;
+mod linear;
+mod linear_delta3;
+mod magellan;
+mod marantec;
+mod marantec24;
+mod mastercode;
 mod psa;
 mod mazda_v0;
 mod mitsubishi_v0;
@@ -50,6 +75,13 @@ mod ford_v1;
 mod ford_v2;
 mod ford_v3;
 mod kia_v7;
+mod princeton;
+mod psa2;
+mod revers_rb2;
+mod roger;
+mod secplus_v1;
+mod secplus_v2;
+
 
 pub use common::DecodedSignal;
 
@@ -108,15 +140,21 @@ impl ProtocolRegistry {
     pub fn new() -> Self {
         let decoders: Vec<Box<dyn ProtocolDecoder>> = vec![
             // Kia protocols
-            Box::new(kia_v0::KiaV0Decoder::new()),
+            Box::new(intertechno_v3::IntertechnoV3Decoder::new()),
+        Box::new(keyfinder::KeyFinderDecoder::new()),
+        Box::new(jarolift::JaroliftDecoder::new()),
+        Box::new(ido::IDoDecoder::new()),
+        Box::new(kia_v0::KiaV0Decoder::new()),
             Box::new(kia_v1::KiaV1Decoder::new()),
             Box::new(kia_v2::KiaV2Decoder::new()),
             Box::new(kia_v3_v4::KiaV3V4Decoder::new()),
             Box::new(kia_v5::KiaV5Decoder::new()),
             Box::new(kia_v6::KiaV6Decoder::new()),
             // VAG before Ford/Subaru so 500/1000µs VAG streams decode as VAG (ProtoPirate order has VAG after Ford/Subaru but Flipper likely feeds all decoders; KAT uses first-match so VAG must be tried earlier)
+
             Box::new(vag::VagDecoder::new()),
             Box::new(ford_v0::FordV0Decoder::new()),
+            Box::new(somfy_telis::SomfyTelisDecoder::new()),
             Box::new(subaru::SubaruDecoder::new()),
             Box::new(fiat_v0::FiatV0Decoder::new()),
             Box::new(fiat_v1::FiatV1Decoder::new()),
@@ -134,6 +172,31 @@ impl ProtocolRegistry {
             Box::new(ford_v2::FordV2Decoder::new()),
             Box::new(ford_v3::FordV3Decoder::new()),
             Box::new(kia_v7::KiaV7Decoder::new()),
+            Box::new(princeton::PrincetonDecoder::new()),
+            Box::new(psa2::Psa2Decoder::new()),
+            Box::new(revers_rb2::ReversRb2Decoder::new()),
+            Box::new(roger::RogerDecoder::new()),
+            Box::new(secplus_v1::SecPlusV1Decoder::new()),
+            Box::new(secplus_v2::SecPlusV2Decoder::new()),
+            Box::new(kinggates_stylo_4k::KingGatesStylo4kDecoder::new()),
+            Box::new(landrover_rke::LandRoverRkeDecoder::new()),
+            Box::new(legrand::LegrandDecoder::new()),
+            Box::new(linear::LinearDecoder::new()),
+            Box::new(linear_delta3::LinearDelta3Decoder::new()),
+            Box::new(magellan::MagellanDecoder::new()),
+            Box::new(marantec::MarantecDecoder::new()),
+            Box::new(marantec24::Marantec24Decoder::new()),
+            Box::new(mastercode::MastercodeDecoder::new()),
+            Box::new(mazda_siemens::MazdaSiemensDecoder::new()),
+            Box::new(megacode::MegaCodeDecoder::new()),
+            Box::new(nero_radio::NeroRadioDecoder::new()),
+            Box::new(nero_sketch::NeroSketchDecoder::new()),
+            Box::new(nice_flo::NiceFloDecoder::new()),
+            Box::new(nice_flor_s::NiceFlorSDecoder::new()),
+            Box::new(phoenix_v2::PhoenixV2Decoder::new()),
+            Box::new(porsche_cayenne::PorscheCayenneDecoder::new()),
+            Box::new(power_smart::PowerSmartDecoder::new()),
+            Box::new(honda_static::HondaStaticDecoder::new()),
         ];
 
         Self { decoders }
