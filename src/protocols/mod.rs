@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_variables, unused_macros, unused_imports)]
 //! Protocol decoders and encoders for various keyfob systems.
 //!
 //! Protocols are aligned with the ProtoPirate reference (`REFERENCES/ProtoPirate/protocols/`).

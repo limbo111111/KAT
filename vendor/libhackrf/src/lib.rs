@@ -1,7 +1,8 @@
+#![allow(unused_imports)]
 use std::{
     any::Any,
     ffi::c_void,
-    ptr, slice,
+    mem, ptr, slice,
     sync::{
         atomic::{AtomicPtr, AtomicUsize, Ordering},
         Arc,
