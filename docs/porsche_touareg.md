@@ -70,3 +70,4 @@ Not supported (decode-only).
 ## Frequencies
 
 433.92 MHz, 868.35 MHz.
+

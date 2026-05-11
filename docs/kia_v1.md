@@ -15,8 +15,8 @@ Kia V1 uses Manchester encoding at 800/1600 us. 57 bits total: 32 serial + 8 but
 
 | Parameter | Value   | Notes   |
 |-----------|---------|---------|
-| Short     | 800 µs  | ±200 µs |
-| Long      | 1600 µs | ±200 µs |
+| Short     | 800 us  | Â±200 us |
+| Long      | 1600 us | Â±200 us |
 | Min bits  | 57      |         |
 
 ## Encoding
@@ -32,9 +32,9 @@ Manchester: symbol duration short or long; bit value from transition direction.
 
 ## Decoder Steps
 
-1. **Reset** — Wait for long pulse (preamble).
-2. **CheckPreamble** — Count long pairs until enough; then transition to data.
-3. **DecodeData** — Manchester decode; at 57 bits validate CRC4 and return.
+1. **Reset** â€” Wait for long pulse (preamble).
+2. **CheckPreamble** â€” Count long pairs until enough; then transition to data.
+3. **DecodeData** â€” Manchester decode; at 57 bits validate CRC4 and return.
 
 ## Encoder
 
@@ -43,3 +43,4 @@ Supported; builds preamble and Manchester-encoded 57-bit frame.
 ## Frequencies
 
 433.92 MHz.
+

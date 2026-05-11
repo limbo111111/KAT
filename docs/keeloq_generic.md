@@ -11,8 +11,8 @@ layout: default
 
 When no known protocol decodes a captured signal, KAT tries to decode it as **KeeLoq** using **every** manufacturer key in the embedded keystore, **regardless of frequency**. All decryption is done via the **keeloq_common** helper (no protocol-specific decrypt code). Two air formats are tried (in order):
 
-1. **Kia V3/V4 format** — 68 bits, 400/800 µs PWM  
-2. **Star Line format** — 64 bits, 250/500 µs PWM  
+1. **Kia V3/V4 format** â€” 68 bits, 400/800 us PWM  
+2. **Star Line format** â€” 64 bits, 250/500 us PWM  
 
 Bit collection reuses the existing Kia V3/V4 and Star Line state machines; decryption and validation use only **keeloq_common** (`keeloq_decrypt`, `keeloq_normal_learning`, `reverse_key`, `reverse8`). Each key is tried in **both byte orders** (as stored in the keystore, and byte-swapped) so that either big-endian or little-endian key sources can match.
 
@@ -25,7 +25,7 @@ Bit collection reuses the existing Kia V3/V4 and Star Line state machines; decry
 
 On first successful decrypt with a given key, the capture is shown in the list with:
 
-- **Protocol:** `Keeloq (keystore name)` — e.g. `Keeloq (Alligator)`, `Keeloq (Pandora_PRO)`, `Keeloq (KIA)`.
+- **Protocol:** `Keeloq (keystore name)` â€” e.g. `Keeloq (Alligator)`, `Keeloq (Pandora_PRO)`, `Keeloq (KIA)`.
 - Serial, button, counter, CRC, and data as for other KeeLoq decodes.
 
 ## Keystore
@@ -44,3 +44,4 @@ Captures decoded as **Keeloq (*name*)** are decode-only in this path. Retransmit
 4. If no key validates, return `None` (capture stays unknown or is shown as unknown in research mode).
 
 Implementations are aligned with the ProtoPirate reference; keeloq_common matches `REFERENCES/ProtoPirate/protocols/keeloq_common.c`.
+

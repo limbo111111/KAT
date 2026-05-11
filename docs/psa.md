@@ -75,3 +75,4 @@ Supported (mode 0x23 only). XOR encrypt, then modified TEA encrypt with BF1 key 
 ## Frequencies
 
 433.92 MHz.
+

@@ -9,14 +9,14 @@ layout: default
 
 ## Overview
 
-Kia V2 uses Manchester encoding at 500/1000 µs. 53 bits: 32 serial + 4 button + 12 counter + 4 CRC, plus start bit. Long preamble of 252 long pairs. CRC4 (XOR nibbles + offset 1).
+Kia V2 uses Manchester encoding at 500/1000 us. 53 bits: 32 serial + 4 button + 12 counter + 4 CRC, plus start bit. Long preamble of 252 long pairs. CRC4 (XOR nibbles + offset 1).
 
 ## Timing
 
 | Parameter | Value   | Notes   |
 |-----------|---------|---------|
-| Short     | 500 µs  | ±150 µs |
-| Long      | 1000 µs | ±150 µs |
+| Short     | 500 us  | Â±150 us |
+| Long      | 1000 us | Â±150 us |
 | Min bits  | 53      |         |
 
 ## Encoding
@@ -29,9 +29,9 @@ Manchester encoding; bit value from short/long and transition.
 
 ## Decoder Steps
 
-1. **Reset** — Wait for preamble (long pulses).
-2. **CheckPreamble** — Count 252 long pairs.
-3. **CollectRawBits** — Manchester decode; at 53 bits validate CRC4 and return.
+1. **Reset** â€” Wait for preamble (long pulses).
+2. **CheckPreamble** â€” Count 252 long pairs.
+3. **CollectRawBits** â€” Manchester decode; at 53 bits validate CRC4 and return.
 
 ## Encoder
 
@@ -40,3 +40,4 @@ Supported; preamble and Manchester 53-bit frame.
 ## Frequencies
 
 433.92 MHz.
+

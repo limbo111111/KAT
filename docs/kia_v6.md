@@ -9,14 +9,14 @@ layout: default
 
 ## Overview
 
-Kia V6 uses Manchester encoding at 200/400 µs (level convention inverted vs Flipper). 144 bits in three parts: part1 (64) + part2 (64) + part3 (16); each part stored inverted. Long preamble of 601 pairs; sync bits 1,1,0,1 then data. AES-128 decryption with key derived from KIA V6 A and B keystores (types 11 and 12) and XOR masks.
+Kia V6 uses Manchester encoding at 200/400 us (level convention inverted vs Flipper). 144 bits in three parts: part1 (64) + part2 (64) + part3 (16); each part stored inverted. Long preamble of 601 pairs; sync bits 1,1,0,1 then data. AES-128 decryption with key derived from KIA V6 A and B keystores (types 11 and 12) and XOR masks.
 
 ## Timing
 
 | Parameter | Value  | Notes   |
 |-----------|--------|---------|
-| Short     | 200 µs | ±100 µs |
-| Long      | 400 µs | ±100 µs |
+| Short     | 200 us | Â±100 us |
+| Long      | 400 us | Â±100 us |
 | Preamble  | 601 pairs |    |
 | Min bits  | 144    |         |
 
@@ -34,9 +34,9 @@ AES-128 decrypt with key = f(keystore_a, keystore_b, XOR_MASK_LOW, XOR_MASK_HIGH
 
 ## Decoder Steps
 
-1. **Reset** — Wait for preamble.
-2. **CheckPreamble** — Count 601 pairs; detect sync pattern 1,1,0,1.
-3. **Data** — Manchester decode 144 bits; invert segments; AES-128 decrypt; validate CRC8; return fields.
+1. **Reset** â€” Wait for preamble.
+2. **CheckPreamble** â€” Count 601 pairs; detect sync pattern 1,1,0,1.
+3. **Data** â€” Manchester decode 144 bits; invert segments; AES-128 decrypt; validate CRC8; return fields.
 
 ## Encoder
 
@@ -49,3 +49,4 @@ Supported. Ported from ProtoPirate (`ENABLE_EMULATE_FEATURE`). Builds plaintext 
 ## Keystore
 
 Requires KIA V6 A and B keys (keystore types 11 and 12: `kia_v6_a_key`, `kia_v6_b_key`). XOR masks applied to derive AES key.
+
