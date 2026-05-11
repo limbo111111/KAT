@@ -1,7 +1,7 @@
 use std::{
     any::Any,
     ffi::c_void,
-    mem, ptr, slice,
+    ptr, slice,
     sync::{
         atomic::{AtomicPtr, AtomicUsize, Ordering},
         Arc,
