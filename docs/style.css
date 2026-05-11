@@ -298,21 +298,89 @@ header .tagline {
     list-style: none;
 }
 
-.protocol-column li {
-    padding: 0.6rem 0;
-    color: var(--text-secondary);
+/* Protocol Expandable Item */
+.protocol-dropdown {
     border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-    font-size: 0.95rem;
-    transition: color 0.2s ease, transform 0.2s ease;
+    transition: all 0.3s ease;
 }
 
-.protocol-column li:hover {
+.protocol-dropdown[open] {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 8px;
+    padding-bottom: 0.8rem;
+    margin-bottom: 0.5rem;
+}
+
+.protocol-dropdown summary {
+    padding: 0.8rem 0;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: color 0.2s ease, transform 0.2s ease;
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.protocol-dropdown summary::-webkit-details-marker {
+    display: none;
+}
+
+.protocol-dropdown summary::after {
+    content: '+';
+    color: var(--primary-color);
+    font-size: 1.2rem;
+    transition: transform 0.3s ease;
+}
+
+.protocol-dropdown[open] summary::after {
+    content: '−';
+    transform: rotate(180deg);
+}
+
+.protocol-dropdown summary:hover {
     color: var(--text-primary);
     transform: translateX(4px);
 }
 
-.protocol-column li:last-child {
-    border-bottom: none;
+/* Info Badges */
+.protocol-details {
+    padding: 0 0.8rem 0.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    animation: fadeInDown 0.3s ease forwards;
+}
+
+@keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.detail-badge {
+    font-size: 0.75rem;
+    padding: 4px 10px;
+    border-radius: 20px;
+    background: rgba(17, 24, 39, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.detail-badge.freq {
+    color: var(--primary-color);
+    border-color: rgba(0, 242, 254, 0.2);
+    box-shadow: inset 0 0 10px rgba(0, 242, 254, 0.05);
+}
+
+.detail-badge.mod {
+    color: var(--accent-color);
+    border-color: rgba(139, 92, 246, 0.2);
+    box-shadow: inset 0 0 10px rgba(139, 92, 246, 0.05);
 }
 
 /* Requirements Section */
