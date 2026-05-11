@@ -23,6 +23,7 @@ const KIA_KEY1: u32 = 10; // kia_mf_key (KIA V3/V4)
 const KIA_KEY2: u32 = 11; // kia_v6_a_key (KIA V6A)
 const KIA_KEY3: u32 = 12; // kia_v6_b_key (KIA V6B)
 const KIA_KEY4: u32 = 13; // kia_v5_key (KIA V5)
+const FAAC_SLH_KEY: u32 = 5; // faac_slh_key (FAAC SLH)
 const STAR_LINE_KEY: u32 = 20; // star_line_mf_key
 
 /// Maximum number of VAG AUT64 keys (embedded blob has 64 bytes = 4 keys)
@@ -38,6 +39,8 @@ pub struct KeyStore {
     pub kia_v6_b_key: u64,
     /// KIA V5 mixer key
     pub kia_v5_key: u64,
+    /// FAAC SLH manufacturer key
+    pub faac_slh_key: u64,
     /// Star Line manufacturer key (for KeeLoq)
     pub star_line_mf_key: u64,
     /// VAG AUT64 keys
@@ -53,6 +56,7 @@ impl Default for KeyStore {
             kia_v6_a_key: 0,
             kia_v6_b_key: 0,
             kia_v5_key: 0,
+            faac_slh_key: 0,
             star_line_mf_key: 0,
             vag_keys: Vec::new(),
             vag_keys_loaded: false,
@@ -75,6 +79,7 @@ impl KeyStore {
                 KIA_KEY2 => self.kia_v6_a_key = key_value,
                 KIA_KEY3 => self.kia_v6_b_key = key_value,
                 KIA_KEY4 => self.kia_v5_key = key_value,
+                FAAC_SLH_KEY => self.faac_slh_key = key_value,
                 STAR_LINE_KEY => self.star_line_mf_key = key_value,
                 _ => {}
             }
@@ -132,6 +137,11 @@ impl KeyStore {
     /// Get the KIA V5 mixer key
     pub fn get_kia_v5_key(&self) -> u64 {
         self.kia_v5_key
+    }
+
+    /// Get the FAAC SLH manufacturer key
+    pub fn get_faac_slh_key(&self) -> u64 {
+        self.faac_slh_key
     }
 
     /// Get the Star Line manufacturer key

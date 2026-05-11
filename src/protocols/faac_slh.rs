@@ -20,9 +20,6 @@ pub struct FaacSlhDecoder {
     te_last: u32,
     decode_data: u64,
     decode_count_bit: usize,
-
-    // We mock the manufacture keystore for now by using a static key or relying on extra data
-    allow_zero_seed: bool,
 }
 
 impl FaacSlhDecoder {
@@ -32,7 +29,6 @@ impl FaacSlhDecoder {
             te_last: 0,
             decode_data: 0,
             decode_count_bit: 0,
-            allow_zero_seed: false,
         }
     }
 
@@ -123,9 +119,18 @@ impl ProtocolDecoder for FaacSlhDecoder {
                                 seed = (data_prg[5] as u32) << 24 | (data_prg[4] as u32) << 16 | (data_prg[3] as u32) << 8 | (data_prg[2] as u32);
                                 cnt = data_prg[1] as u16;
                             } else {
-                                // Default FAAC learning key is not natively known by Flipper unless provided via Keystore
-                                // We extract basic parts
-                                cnt = 0; // Requires decryption if we know the manufacture key
+                                // For normal remotes, if we have the FAAC SLH manufacturer key in the keystore,
+                                // we can decrypt code_hop. However, real FAAC SLH requires the 'seed' to derive the learning key.
+                                // If the keystore somehow contains a learning key or if we assume simple decryption:
+                                let mf_key = crate::protocols::keys::get_keystore().get_faac_slh_key();
+                                if mf_key != 0 {
+                                    // Normally FAAC uses keeloq_faac_learning(seed, mf_key) but without seed we can't derive it.
+                                    // If mf_key is already a learning key, we can try decrypting directly:
+                                    let decrypted = crate::protocols::keeloq_common::keeloq_decrypt(code_hop, mf_key);
+                                    cnt = (decrypted & 0xFFFF) as u16;
+                                } else {
+                                    cnt = 0;
+                                }
                             }
 
                             let decoded = DecodedSignal {
