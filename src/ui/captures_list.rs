@@ -135,7 +135,7 @@ fn render_table(frame: &mut Frame, area: Rect, app: &App) {
                 .borders(Borders::ALL)
                 .title(" Captures "),
         )
-        .row_highlight_style(Style::default().add_modifier(Modifier::REVERSED));
+        .highlight_symbol(">> ").row_highlight_style(Style::default().add_modifier(Modifier::REVERSED));
 
     let mut state = TableState::default();
     state.select(app.selected_capture);
