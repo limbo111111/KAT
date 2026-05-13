@@ -232,16 +232,15 @@ impl ProtocolDecoder for ChamberlainCodeDecoder {
             }
         }
 
-        // Fix missing logic in raw bit pushing: Flipper-ARF builds a bit array then converts to LevelDuration based on bit sequences.
+        // Consolidation logic: Flipper-ARF builds a bit array then converts to LevelDuration based on bit sequences.
         // It converts sequence of bits into TE_SHORT long levels.
+        // Because original C code uses `subghz_protocol_blocks_get_upload_from_bit_array`
+        // we combine consecutive same-level `TE_SHORT`s.
 
         let mut final_upload: Vec<LevelDuration> = Vec::new();
         for level_dur in upload {
-            // Because original C code uses `subghz_protocol_blocks_get_upload_from_bit_array`
-            // we will combine consecutive same-level `TE_SHORT`s.
             if let Some(last) = final_upload.last_mut() {
-                let current_level = level_dur.level;
-                if current_level == last.level {
+                if level_dur.level == last.level {
                     last.duration_us += level_dur.duration_us;
                     continue;
                 }
