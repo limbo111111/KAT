@@ -1,7 +1,7 @@
 //! Captures list widget with detail panel.
 
 use ratatui::{
-    layout::{Constraint, Direction, Layout, Rect},
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Cell, Paragraph, Row, Table, TableState, Wrap},
@@ -44,6 +44,23 @@ pub fn render_captures_list(frame: &mut Frame, area: Rect, app: &App) {
 
 /// Render the compact signal table
 fn render_table(frame: &mut Frame, area: Rect, app: &App) {
+    if app.captures.is_empty() {
+        let empty_text = if app.radio_state == crate::app::RadioState::Receiving {
+            "Listening for signals... (Press 'r' to stop)"
+        } else {
+            "No captures yet. Press 'r' to start receiving."
+        };
+        let empty_msg = Paragraph::new(vec![
+            Line::from(""),
+            Line::from(""),
+            Line::from(Span::styled(empty_text, Style::default().fg(Color::DarkGray))),
+        ])
+        .alignment(Alignment::Center)
+        .block(Block::default().borders(Borders::ALL).title(" Captures "));
+        frame.render_widget(empty_msg, area);
+        return;
+    }
+
     let header_cells = [
         "ID", "Time", "Protocol", "Freq", "Serial", "Btn", "Cnt", "Modulation", "CRC", "Status",
         "Vuln Found",
