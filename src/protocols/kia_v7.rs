@@ -100,13 +100,12 @@ impl KiaV7Decoder {
         let counter = ((bytes[1] as u16) << 8) | (bytes[2] as u16);
         let button = bytes[6] & 0x0F;
 
-        let mut button_name = None;
-        match button {
-            0x01 => button_name = Some("Lock"),
-            0x02 => button_name = Some("Unlock"),
-            0x03 | 0x08 => button_name = Some("Trunk"), // BOOT
-            _ => button_name = Some("Unknown"),
-        }
+        let button_name = match button {
+            0x01 => Some("Lock"),
+            0x02 => Some("Unlock"),
+            0x03 | 0x08 => Some("Trunk"), // BOOT
+            _ => Some("Unknown"),
+        };
 
         let mut sig = DecodedSignal {
             serial: Some(serial),

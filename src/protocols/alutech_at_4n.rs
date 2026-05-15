@@ -104,7 +104,7 @@ impl ProtocolDecoder for AlutechAt4nDecoder {
                         self.step = DecoderStep::Reset;
 
                         if self.decode_count_bit >= MIN_COUNT_BIT {
-                            let mut data = self.decode_data;
+                            let data = self.decode_data;
 
                             // CRC byte is sent last and takes up 8 bits
                             let mut tmp_data = data;

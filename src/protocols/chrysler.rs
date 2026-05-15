@@ -81,18 +81,17 @@ impl ChryslerDecoder {
         let msb = (d[0] >> 7) & 1;
 
         let b1_xor_b6 = d[1] ^ d[6];
-        let mut btn = 0;
-        if msb == 0 {
+        let btn = if msb == 0 {
             if b1_xor_b6 == 0x04 {
-                btn = 0x01;
+                0x01
             } else if b1_xor_b6 == 0x08 {
-                btn = 0x02;
+                0x02
             } else {
-                btn = 0x00;
+                0x00
             }
         } else {
-            btn = 0xFF; // Can't distinguish from MSB=1 mask
-        }
+            0xFF // Can't distinguish from MSB=1 mask
+        };
 
         let serial = ((d[1] ^ d[2]) as u32) << 24 |
                      ((d[1] ^ d[3]) as u32) << 16 |

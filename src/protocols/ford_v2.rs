@@ -91,15 +91,14 @@ impl FordV2Decoder {
         let cnt = (((k[7] & 0x7F) as u16) << 9) | ((k[8] as u16) << 1) | ((k[9] as u16) >> 7);
         let tail31 = (((k[9] & 0x7F) as u32) << 24) | ((k[10] as u32) << 16) | ((k[11] as u32) << 8) | (k[12] as u32);
 
-        let mut button_name = None;
-        match btn {
-            0x10 => button_name = Some("Lock"),
-            0x11 => button_name = Some("Unlock"),
-            0x12 => button_name = Some("Trunk"),
-            0x14 => button_name = Some("Panic"),
-            0x15 => button_name = Some("RemoteStart"),
-            _ => button_name = Some("Unknown"),
-        }
+        let button_name = match btn {
+            0x10 => Some("Lock"),
+            0x11 => Some("Unlock"),
+            0x12 => Some("Trunk"),
+            0x14 => Some("Panic"),
+            0x15 => Some("RemoteStart"),
+            _ => Some("Unknown"),
+        };
 
         let mut key1: u64 = 0;
         for i in 0..8 {
