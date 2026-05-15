@@ -151,13 +151,12 @@ impl FordV3Decoder {
             return None;
         }
 
-        let mut button_name = None;
-        match btn {
-            0x10 => button_name = Some("Lock"),
-            0x20 => button_name = Some("Unlock"),
-            0x40 => button_name = Some("Trunk"),
-            _ => button_name = Some("Unknown"),
-        }
+        let button_name = match btn {
+            0x10 => Some("Lock"),
+            0x20 => Some("Unlock"),
+            0x40 => Some("Trunk"),
+            _ => Some("Unknown"),
+        };
 
         let mut key1: u64 = 0;
         for i in 0..8 {

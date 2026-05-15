@@ -135,9 +135,9 @@ impl SecPlusV2Decoder {
     }
 
     fn mix_order_encode(order: u8, p: &mut [u16; 3]) -> bool {
-        let mut a = 0;
-        let mut b = 0;
-        let mut c = 0;
+        let a;
+        let b;
+        let c;
         match order {
             0x06 | 0x09 => { a = p[2]; b = p[1]; c = p[0]; }
             0x08 | 0x04 => { a = p[1]; b = p[2]; c = p[0]; }

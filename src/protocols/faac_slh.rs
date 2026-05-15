@@ -101,9 +101,8 @@ impl ProtocolDecoder for FaacSlhDecoder {
 
                             let mut is_prog_mode = false;
                             let mut seed = 0u32;
-                            let mut cnt = 0u16;
 
-                            if data_prg[7] == 0x52 && data_prg[6] == 0x0F && data_prg[0] == 0x00 {
+                            let cnt = if data_prg[7] == 0x52 && data_prg[6] == 0x0F && data_prg[0] == 0x00 {
                                 is_prog_mode = true;
                                 for _ in 0..(data_prg[1] & 0xF) {
                                     let data_tmp = data_prg[2];
@@ -117,7 +116,7 @@ impl ProtocolDecoder for FaacSlhDecoder {
                                 data_prg[4] ^= data_prg[1];
                                 data_prg[5] ^= data_prg[1];
                                 seed = (data_prg[5] as u32) << 24 | (data_prg[4] as u32) << 16 | (data_prg[3] as u32) << 8 | (data_prg[2] as u32);
-                                cnt = data_prg[1] as u16;
+                                data_prg[1] as u16
                             } else {
                                 // For normal remotes, if we have the FAAC SLH manufacturer key in the keystore,
                                 // we can decrypt code_hop. However, real FAAC SLH requires the 'seed' to derive the learning key.
@@ -127,11 +126,11 @@ impl ProtocolDecoder for FaacSlhDecoder {
                                     // Normally FAAC uses keeloq_faac_learning(seed, mf_key) but without seed we can't derive it.
                                     // If mf_key is already a learning key, we can try decrypting directly:
                                     let decrypted = crate::protocols::keeloq_common::keeloq_decrypt(code_hop, mf_key);
-                                    cnt = (decrypted & 0xFFFF) as u16;
+                                    (decrypted & 0xFFFF) as u16
                                 } else {
-                                    cnt = 0;
+                                    0
                                 }
-                            }
+                            };
 
                             let decoded = DecodedSignal {
                                 serial: Some(code_fix >> 4),
@@ -192,7 +191,7 @@ impl ProtocolDecoder for FaacSlhDecoder {
         upload.push(LevelDuration::new(true, TE_LONG * 2));
         upload.push(LevelDuration::new(false, TE_LONG * 2));
 
-        let mut encode_data = decoded.data;
+        let encode_data = decoded.data;
 
         // In real FAAC SLH we would regenerate the Keeloq part if we know the seed and manufacture key
         // For simple replay without rolling, we just replay the data

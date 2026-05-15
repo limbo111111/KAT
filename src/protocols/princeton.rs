@@ -175,7 +175,6 @@ impl ProtocolDecoder for PrincetonDecoder {
     }
 
     fn encode(&self, decoded: &DecodedSignal, button: u8) -> Option<Vec<LevelDuration>> {
-        let mut data = decoded.data;
         let serial = decoded.serial.unwrap_or(0);
         let mut btn = button;
 
@@ -189,13 +188,13 @@ impl ProtocolDecoder for PrincetonDecoder {
             btn = original_btn;
         }
 
-        if btn == 0x30 || btn == 0xC0 {
-            data = ((serial as u64) << 8) | (btn as u64);
+        let data = if btn == 0x30 || btn == 0xC0 {
+            ((serial as u64) << 8) | (btn as u64)
         } else if btn == 0xF3 || btn == 0xFC {
-            data = ((serial as u64) << 8) | ((btn & 0xF) as u64);
+            ((serial as u64) << 8) | ((btn & 0xF) as u64)
         } else {
-            data = ((serial as u64) << 4) | (btn as u64);
-        }
+            ((serial as u64) << 4) | (btn as u64)
+        };
 
         let mut signal = Vec::with_capacity((decoded.data_count_bit * 2) + 2);
 
