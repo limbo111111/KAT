@@ -31,7 +31,7 @@ pub fn render_status_bar(frame: &mut Frame, area: Rect, app: &App) {
     let status = Paragraph::new(status_line).block(
         Block::default()
             .borders(Borders::ALL)
-            .title("status"),
+            .title(" Status "),
     );
 
     frame.render_widget(status, area);

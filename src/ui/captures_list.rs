@@ -46,7 +46,7 @@ pub fn render_captures_list(frame: &mut Frame, area: Rect, app: &App) {
 fn render_table(frame: &mut Frame, area: Rect, app: &App) {
     if app.captures.is_empty() {
         let empty_text = if app.radio_state == crate::app::RadioState::Receiving {
-            "Listening for signals... (Press 'r' to stop)"
+            "Listening for signals... 📡 (Press 'r' to stop)"
         } else {
             "No captures yet. Press 'r' to start receiving."
         };
@@ -108,7 +108,7 @@ fn render_table(frame: &mut Frame, area: Rect, app: &App) {
                 capture.region.as_deref(),
             )
             .is_empty();
-        let vuln_text = if vuln_found { "Yes" } else { "No" };
+        let vuln_text = if vuln_found { "Yes ⚠" } else { "-" };
         let vuln_style = if vuln_found {
             Style::default().fg(Color::Green)
         } else {
