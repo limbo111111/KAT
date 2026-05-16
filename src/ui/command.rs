@@ -105,7 +105,7 @@ pub fn render_command_line(frame: &mut Frame, area: Rect, app: &App) {
     let input = Paragraph::new(input_line).block(
         Block::default()
             .borders(Borders::ALL)
-            .title("input"),
+            .title(" Input "),
     );
 
     frame.render_widget(input, area);
