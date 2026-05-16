@@ -348,7 +348,7 @@ impl ProtocolRegistry {
                     .supported_frequencies()
                     .iter()
                     .any(|&f| {
-                        let diff = if f > frequency { f - frequency } else { frequency - f };
+                        let diff = f.abs_diff(frequency);
                         diff < (f / 50)
                     });
                 if !freq_supported {
@@ -400,7 +400,7 @@ impl ProtocolRegistry {
                     .supported_frequencies()
                     .iter()
                     .any(|&f| {
-                        let diff = if f > frequency { f - frequency } else { frequency - f };
+                        let diff = f.abs_diff(frequency);
                         diff < (f / 50) // 2% tolerance
                     });
 
