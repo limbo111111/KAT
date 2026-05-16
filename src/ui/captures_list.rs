@@ -45,20 +45,25 @@ pub fn render_captures_list(frame: &mut Frame, area: Rect, app: &App) {
 /// Render the compact signal table
 fn render_table(frame: &mut Frame, area: Rect, app: &App) {
     if app.captures.is_empty() {
-        let (icon, main_text, sub_text, color) = if app.radio_state == crate::app::RadioState::Receiving {
-            (
+        let (icon, main_text, sub_text, color) = match app.radio_state {
+            crate::app::RadioState::Receiving => (
                 "📡",
                 "Listening for signals...",
                 "Waiting to capture an RF transmission",
                 Color::Green,
-            )
-        } else {
-            (
+            ),
+            crate::app::RadioState::Disconnected => (
+                "🔌",
+                "Radio disconnected",
+                "Connect a device to capture signals",
+                Color::Red,
+            ),
+            _ => (
                 "💤",
                 "Radio is idle",
                 "Press 'r' to start receiving",
                 Color::DarkGray,
-            )
+            ),
         };
 
         let empty_msg = Paragraph::new(vec![
