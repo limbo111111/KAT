@@ -53,7 +53,7 @@ pub struct Config {
 impl Config {
     /// Build the default config, using the given config_dir as the base.
     /// This keeps everything under `~/.config/KAT/` by default.
-    fn default_for(config_dir: &PathBuf) -> Self {
+    fn default_for(config_dir: &std::path::Path) -> Self {
         Self {
             export_directory: config_dir.join("exports"),
             import_directory: config_dir.join("import"),
@@ -69,7 +69,7 @@ impl Config {
     }
 
     /// Load config from an INI file, falling back to defaults for missing keys.
-    fn load_from_ini(path: &std::path::Path, config_dir: &PathBuf) -> Result<Self> {
+    fn load_from_ini(path: &std::path::Path, config_dir: &std::path::Path) -> Result<Self> {
         let mut ini = Ini::new();
         ini.load(path)
             .map_err(|e| anyhow::anyhow!("Failed to load config: {}", e))?;
@@ -237,9 +237,9 @@ impl Default for Config {
 
 /// Expand `~` at the start of a path to the user's home directory.
 fn expand_tilde(s: &str) -> PathBuf {
-    if s.starts_with("~/") {
+    if let Some(stripped) = s.strip_prefix("~/") {
         if let Some(home) = dirs::home_dir() {
-            return home.join(&s[2..]);
+            return home.join(stripped);
         }
     }
     PathBuf::from(s)

@@ -317,14 +317,12 @@ impl Demodulator {
 
         // Ensure reasonable bounds — very low threshold for weak signals,
         // but not so low that ADC noise alone triggers it
-        self.threshold = self.threshold.max(0.02).min(0.5);
+        self.threshold = self.threshold.clamp(0.02, 0.5);
 
         // Dynamic hysteresis: 10% of the estimated signal-noise gap, clamped to [0.01, 0.08].
         // This prevents chattering near the threshold while allowing clean transitions
         // for both strong and weak signals.
-        self.hysteresis = ((self.high_level - self.low_level) * 0.10)
-            .max(0.01)
-            .min(0.08);
+        self.hysteresis = ((self.high_level - self.low_level) * 0.10).clamp(0.01, 0.08);
     }
 
     /// Reset the demodulator state (keeps threshold adaptation)

@@ -278,7 +278,7 @@ impl ProtocolDecoder for SecPlusV1Decoder {
             acc += rolling_array[i - 1];
             data_array[i * 2 - 1] = rolling_array[i - 1];
             acc += fixed_array[i - 1];
-            data_array[i * 2] = (acc % 3) as u8;
+            data_array[i * 2] = acc % 3;
         }
 
         acc = 0;
@@ -287,7 +287,7 @@ impl ProtocolDecoder for SecPlusV1Decoder {
             acc += rolling_array[i - 1];
             data_array[i * 2] = rolling_array[i - 1];
             acc += fixed_array[i - 1];
-            data_array[i * 2 + 1] = (acc % 3) as u8;
+            data_array[i * 2 + 1] = acc % 3;
         }
 
         let mut signal = Vec::with_capacity(128);
