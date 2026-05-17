@@ -456,7 +456,7 @@ fn render_export_form(frame: &mut Frame, app: &App) {
         "_",
         Style::default()
             .fg(Color::Cyan)
-            .add_modifier(Modifier::RAPID_BLINK),
+            .add_modifier(Modifier::SLOW_BLINK),
     );
 
     // Build the ordered list of field modes for this export type
@@ -673,7 +673,7 @@ fn render_capture_meta_form(frame: &mut Frame, app: &App) {
         "_",
         Style::default()
             .fg(Color::Cyan)
-            .add_modifier(Modifier::RAPID_BLINK),
+            .add_modifier(Modifier::SLOW_BLINK),
     );
 
     let field_modes = [

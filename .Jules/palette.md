@@ -1,6 +1,3 @@
-## 2024-05-14 - Empty States in Terminal UIs
-**Learning:** Adding empty states to list views in ratatui helps users understand system state, especially when background tasks (like receiving signals) are occurring.
-**Action:** Always consider what a list component displays when it has no data, and provide context-aware messages to the user.
-## 2024-05-16 - Avoid Blinking Text Modifiers
-**Learning:** Using `Modifier::RAPID_BLINK` in ratatui TUIs is considered a severe accessibility anti-pattern (flashes/blinking text) that can trigger photosensitive issues and is highly inconsistent across terminals.
-**Action:** Never use `Modifier::RAPID_BLINK` or similar blinking effects for cursors or active states. Rely on standard colors, bolding, or reversing styles for focus indicators instead.
+## 2024-10-27 - Accessibility Improvement: Replace RAPID_BLINK in Ratatui interfaces
+**Learning:** In terminal UIs using `ratatui`, text input cursors often use `Modifier::RAPID_BLINK`. This is universally considered an accessibility/UX anti-pattern that can cause severe distractions or trigger photosensitivity issues (violating WCAG guidelines regarding blink frequencies).
+**Action:** When implementing or modifying cursors and other active UI elements in `ratatui` (or similar TUI frameworks), use `Modifier::SLOW_BLINK` instead of `RAPID_BLINK` to maintain visual indication without causing accessibility issues.
