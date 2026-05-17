@@ -13,8 +13,7 @@ use super::common::DecodedSignal;
 use super::keeloq_common::{
     keeloq_decrypt, keeloq_encrypt, keeloq_magic_serial_type1_learning,
     keeloq_magic_serial_type2_learning, keeloq_magic_serial_type3_learning,
-    keeloq_magic_xor_type1_learning, keeloq_normal_learning, keeloq_secure_learning,
-    reverse_key,
+    keeloq_magic_xor_type1_learning, keeloq_normal_learning, keeloq_secure_learning, reverse_key,
 };
 use crate::keystore;
 use crate::radio::demodulator::LevelDuration;
@@ -25,11 +24,7 @@ const TE_DELTA: u32 = 140;
 const MIN_COUNT_BIT: usize = 64;
 
 fn duration_diff(a: u32, b: u32) -> u32 {
-    if a < b {
-        b - a
-    } else {
-        a - b
-    }
+    b.abs_diff(a)
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -315,9 +310,7 @@ impl super::ProtocolDecoder for KeeloqDecoder {
         let counter = decoded.counter.unwrap_or(0).wrapping_add(1);
         let key = decoded.extra;
         let fix = ((button as u32) << 28) | (serial & 0x0FFFFFFF);
-        let plaintext = ((button as u32) << 28)
-            | ((serial & 0x3FF) << 16)
-            | (counter as u32);
+        let plaintext = ((button as u32) << 28) | ((serial & 0x3FF) << 16) | (counter as u32);
         let hop = if let Some(k) = key {
             keeloq_encrypt(plaintext, k)
         } else {

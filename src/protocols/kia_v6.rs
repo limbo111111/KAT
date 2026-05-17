@@ -10,10 +10,10 @@
 //! - Long preamble of 601 pairs; sync bits 1,1,0,1 then data
 //! - AES-128 decryption with key derived from KIA V6 A/B keystores (types 11/12) and XOR masks
 
-use super::{ProtocolDecoder, ProtocolTiming, DecodedSignal};
 use super::keys;
-use crate::radio::demodulator::LevelDuration;
+use super::{DecodedSignal, ProtocolDecoder, ProtocolTiming};
 use crate::duration_diff;
+use crate::radio::demodulator::LevelDuration;
 
 const TE_SHORT: u32 = 200;
 const TE_LONG: u32 = 400;
@@ -92,7 +92,7 @@ pub struct KiaV6Decoder {
     te_last: u32,
     header_count: u16,
     manchester_state: ManchesterState,
-    
+
     data_part1_low: u32,
     data_part1_high: u32,
     stored_part1_low: u32,
@@ -100,7 +100,7 @@ pub struct KiaV6Decoder {
     stored_part2_low: u32,
     stored_part2_high: u32,
     data_part3: u16,
-    
+
     bit_count: u8,
 }
 
@@ -170,11 +170,9 @@ impl KiaV6Decoder {
         state[1] = temp;
 
         let temp = state[2];
-        state[2] = state[10];
-        state[10] = temp;
+        state.swap(2, 10);
         let temp = state[6];
-        state[6] = state[14];
-        state[14] = temp;
+        state.swap(6, 14);
 
         let temp = state[3];
         state[3] = state[7];
@@ -297,11 +295,9 @@ impl KiaV6Decoder {
         state[13] = temp;
 
         let temp = state[2];
-        state[2] = state[10];
-        state[10] = temp;
+        state.swap(2, 10);
         let temp = state[6];
-        state[6] = state[14];
-        state[14] = temp;
+        state.swap(6, 14);
 
         let temp = state[3];
         state[3] = state[15];
@@ -317,7 +313,7 @@ impl KiaV6Decoder {
             let b = state[i * 4 + 1];
             let c = state[i * 4 + 2];
             let d = state[i * 4 + 3];
-            state[i * 4]     = Self::gf_mul2(a) ^ Self::gf_mul2(b) ^ b ^ c ^ d;
+            state[i * 4] = Self::gf_mul2(a) ^ Self::gf_mul2(b) ^ b ^ c ^ d;
             state[i * 4 + 1] = a ^ Self::gf_mul2(b) ^ Self::gf_mul2(c) ^ c ^ d;
             state[i * 4 + 2] = a ^ b ^ Self::gf_mul2(c) ^ Self::gf_mul2(d) ^ d;
             state[i * 4 + 3] = Self::gf_mul2(a) ^ a ^ b ^ c ^ Self::gf_mul2(d);
@@ -392,11 +388,7 @@ impl KiaV6Decoder {
     }
 
     /// Build encoder signal: two-pass Manchester with preambles (matches kia_v6.c)
-    fn build_upload(
-        p1_lo: u32, p1_hi: u32,
-        p2_lo: u32, p2_hi: u32,
-        p3: u16,
-    ) -> Vec<LevelDuration> {
+    fn build_upload(p1_lo: u32, p1_hi: u32, p2_lo: u32, p2_hi: u32, p3: u16) -> Vec<LevelDuration> {
         let mut signal = Vec::with_capacity(2000);
 
         // Two passes: 640 preamble pairs, then 38 preamble pairs
@@ -462,7 +454,7 @@ impl KiaV6Decoder {
         let u_var5_a = XOR_MASK_HIGH ^ keystore_a_hi;
 
         let val64_a = ((u_var5_a as u64) << 32) | (u_var15_a as u64);
-        
+
         let keystore_b = Self::get_keystore_b();
         let keystore_b_hi = ((keystore_b >> 32) & 0xFFFFFFFF) as u32;
         let keystore_b_lo = (keystore_b & 0xFFFFFFFF) as u32;
@@ -522,12 +514,13 @@ impl KiaV6Decoder {
         let crc_valid = (calculated_crc ^ stored_crc) < 2;
 
         // Serial: bytes 4-6 as 24-bit big-endian
-        let serial = ((decrypted[4] as u32) << 16) | ((decrypted[5] as u32) << 8) | (decrypted[6] as u32);
+        let serial =
+            ((decrypted[4] as u32) << 16) | ((decrypted[5] as u32) << 8) | (decrypted[6] as u32);
         let button = decrypted[7];
-        let counter = ((decrypted[8] as u32) << 24) |
-                     ((decrypted[9] as u32) << 16) |
-                     ((decrypted[10] as u32) << 8) |
-                     (decrypted[11] as u32);
+        let counter = ((decrypted[8] as u32) << 24)
+            | ((decrypted[9] as u32) << 16)
+            | ((decrypted[10] as u32) << 8)
+            | (decrypted[11] as u32);
 
         Some((serial, button, counter, crc_valid))
     }
@@ -540,24 +533,26 @@ impl KiaV6Decoder {
     /// With the inverted convention, KAT's is_high=true maps to Flipper level=false.
     fn manchester_advance(&mut self, is_short: bool, is_high: bool) -> Option<bool> {
         let event = match (is_short, is_high) {
-            (true, true) => 0,  // Short High (KAT) → Flipper level=false → 0
-            (true, false) => 2, // Short Low (KAT) → Flipper level=true → 2
-            (false, true) => 4, // Long High (KAT) → Flipper level=false → 4
+            (true, true) => 0,   // Short High (KAT) → Flipper level=false → 0
+            (true, false) => 2,  // Short Low (KAT) → Flipper level=true → 2
+            (false, true) => 4,  // Long High (KAT) → Flipper level=false → 4
             (false, false) => 6, // Long Low (KAT) → Flipper level=true → 6
         };
 
         let (new_state, output) = match (self.manchester_state, event) {
-            (ManchesterState::Mid0, 2) | (ManchesterState::Mid1, 2) => 
-                (ManchesterState::Start0, None),
-            (ManchesterState::Mid0, 0) | (ManchesterState::Mid1, 0) => 
-                (ManchesterState::Start1, None),
-            
+            (ManchesterState::Mid0, 2) | (ManchesterState::Mid1, 2) => {
+                (ManchesterState::Start0, None)
+            }
+            (ManchesterState::Mid0, 0) | (ManchesterState::Mid1, 0) => {
+                (ManchesterState::Start1, None)
+            }
+
             (ManchesterState::Start1, 2) => (ManchesterState::Mid1, Some(true)),
             (ManchesterState::Start1, 4) => (ManchesterState::Start0, Some(true)),
-            
+
             (ManchesterState::Start0, 0) => (ManchesterState::Mid0, Some(false)),
             (ManchesterState::Start0, 6) => (ManchesterState::Start1, Some(false)),
-            
+
             _ => (ManchesterState::Mid1, None),
         };
 
@@ -631,13 +626,14 @@ impl ProtocolDecoder for KiaV6Decoder {
                 let diff_short = duration_diff!(duration, TE_SHORT);
                 let diff_long = duration_diff!(duration, TE_LONG);
 
-                if diff_long < TE_DELTA && diff_long < diff_short {
-                    if self.header_count >= PREAMBLE_COUNT {
-                        self.header_count = 0;
-                        self.te_last = duration;
-                        self.step = DecoderStep::WaitLongHigh;
-                        return None;
-                    }
+                if diff_long < TE_DELTA
+                    && diff_long < diff_short
+                    && self.header_count >= PREAMBLE_COUNT
+                {
+                    self.header_count = 0;
+                    self.te_last = duration;
+                    self.step = DecoderStep::WaitLongHigh;
+                    return None;
                 }
 
                 if diff_short >= TE_DELTA && diff_long >= TE_DELTA {
@@ -710,8 +706,8 @@ impl ProtocolDecoder for KiaV6Decoder {
                     self.data_part3 = !(self.data_part1_low as u16);
 
                     if let Some((serial, button, counter, crc_valid)) = self.decrypt() {
-                        let key_data = ((self.stored_part1_high as u64) << 32) |
-                                      (self.stored_part1_low as u64);
+                        let key_data = ((self.stored_part1_high as u64) << 32)
+                            | (self.stored_part1_low as u64);
                         let fx_field = self.extract_fx_field();
 
                         self.step = DecoderStep::Reset;

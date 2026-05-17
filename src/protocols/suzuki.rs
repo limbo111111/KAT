@@ -121,12 +121,11 @@ impl ProtocolDecoder for SuzukiDecoder {
             DecoderStep::CountPreamble => {
                 if level {
                     // HIGH pulse
-                    if self.header_count >= 300 {
-                        if duration_diff!(duration, TE_LONG) <= TE_DELTA {
+                    if self.header_count >= 300
+                        && duration_diff!(duration, TE_LONG) <= TE_DELTA {
                             self.step = DecoderStep::DecodeData;
                             self.add_bit(1);
                         }
-                    }
                 } else {
                     // LOW pulse
                     if duration_diff!(duration, TE_SHORT) <= TE_DELTA {

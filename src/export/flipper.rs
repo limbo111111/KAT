@@ -59,7 +59,7 @@ pub fn scan_sub_files(dir: &Path) -> Vec<std::path::PathBuf> {
     };
     for e in entries.flatten() {
         let p = e.path();
-        if p.extension().map_or(false, |e| e == "sub") {
+        if p.extension().is_some_and(|e| e == "sub") {
             out.push(p);
         }
     }

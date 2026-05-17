@@ -13,9 +13,9 @@
 //! - Fields: [16:47] serial, [8:23] counter, [48:51] button
 
 use super::common::DecodedSignal;
-use crate::protocols::common::{CommonManchesterState, common_manchester_advance};
 use super::{ProtocolDecoder, ProtocolTiming};
 use crate::duration_diff;
+use crate::protocols::common::{common_manchester_advance, CommonManchesterState};
 use crate::radio::demodulator::LevelDuration;
 
 const TE_SHORT: u32 = 250;
@@ -96,11 +96,15 @@ impl KiaV7Decoder {
             return None;
         }
 
-        let serial = (((bytes[3] as u32) << 20) | ((bytes[4] as u32) << 12) | ((bytes[5] as u32) << 4) | ((bytes[6] as u32) >> 4)) & 0x0FFFFFFF;
+        let serial = (((bytes[3] as u32) << 20)
+            | ((bytes[4] as u32) << 12)
+            | ((bytes[5] as u32) << 4)
+            | ((bytes[6] as u32) >> 4))
+            & 0x0FFFFFFF;
         let counter = ((bytes[1] as u16) << 8) | (bytes[2] as u16);
         let button = bytes[6] & 0x0F;
 
-        let mut button_name = None;
+        let button_name;
         match button {
             0x01 => button_name = Some("Lock"),
             0x02 => button_name = Some("Unlock"),
@@ -222,9 +226,17 @@ impl ProtocolDecoder for KiaV7Decoder {
 
             DecoderStep::Data => {
                 let event = if is_short {
-                    if level { 1 } else { 0 }
+                    if level {
+                        1
+                    } else {
+                        0
+                    }
                 } else if is_long {
-                    if level { 3 } else { 2 }
+                    if level {
+                        3
+                    } else {
+                        2
+                    }
                 } else {
                     4
                 };
@@ -276,17 +288,18 @@ impl ProtocolDecoder for KiaV7Decoder {
         let mut signal = Vec::new();
 
         for _ in 0..2 {
-            for _ in 0..319 { // KIA_V7_PREAMBLE_PAIRS = 0x13F = 319
+            for _ in 0..319 {
+                // KIA_V7_PREAMBLE_PAIRS = 0x13F = 319
                 Self::add_level(&mut signal, true, TE_SHORT);
                 Self::add_level(&mut signal, false, TE_SHORT);
             }
 
             Self::add_level(&mut signal, true, TE_SHORT); // extra preamble high? Wait, the encoder loop says index++ = high_short, then bit_count loop...
-            // In Flipper-ARF:
-            // for preamble_pairs { upload(high_short); upload(low_short); }
-            // upload(high_short);
-            // for bit in data { upload(bit ? high_short : low_short); upload(bit ? low_short : high_short); }
-            // upload(high_short); upload(low_tail);
+                                                          // In Flipper-ARF:
+                                                          // for preamble_pairs { upload(high_short); upload(low_short); }
+                                                          // upload(high_short);
+                                                          // for bit in data { upload(bit ? high_short : low_short); upload(bit ? low_short : high_short); }
+                                                          // upload(high_short); upload(low_tail);
 
             for i in (0..64).rev() {
                 let bit = (data >> i) & 1;

@@ -72,18 +72,18 @@ impl ProtocolDecoder for BmwCas4Decoder {
     }
 
     fn feed(&mut self, level: bool, duration: u32) -> Option<DecodedSignal> {
-        let diff_short = if duration > TE_SHORT { duration - TE_SHORT } else { TE_SHORT - duration };
-        let diff_long = if duration > TE_LONG { duration - TE_LONG } else { TE_LONG - duration };
+        let diff_short = duration.abs_diff(TE_SHORT);
+        let diff_long = duration.abs_diff(TE_LONG);
 
         match self.step {
             DecoderStep::Reset => {
-                if level && duration >= PREAMBLE_PULSE_MIN && duration <= PREAMBLE_PULSE_MAX {
+                if level && (PREAMBLE_PULSE_MIN..=PREAMBLE_PULSE_MAX).contains(&duration) {
                     self.step = DecoderStep::Preamble;
                     self.preamble_count = 1;
                 }
             }
             DecoderStep::Preamble => {
-                if duration >= PREAMBLE_PULSE_MIN && duration <= PREAMBLE_PULSE_MAX {
+                if (PREAMBLE_PULSE_MIN..=PREAMBLE_PULSE_MAX).contains(&duration) {
                     self.preamble_count += 1;
                 } else if !level && duration >= GAP_MIN {
                     if self.preamble_count >= PREAMBLE_MIN {

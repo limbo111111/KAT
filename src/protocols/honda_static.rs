@@ -280,12 +280,16 @@ impl ProtocolDecoder for HondaStaticDecoder {
     fn feed(&mut self, level: bool, duration: u32) -> Option<DecodedSignal> {
         let sym = if level { 1 } else { 0 };
 
-        if duration >= HONDA_STATIC_SHORT_BASE_US && duration - HONDA_STATIC_SHORT_BASE_US <= HONDA_STATIC_SHORT_SPAN_US {
+        if duration >= HONDA_STATIC_SHORT_BASE_US
+            && duration - HONDA_STATIC_SHORT_BASE_US <= HONDA_STATIC_SHORT_SPAN_US
+        {
             self.push_symbol(sym);
             return None;
         }
 
-        if duration >= HONDA_STATIC_LONG_BASE_US && duration - HONDA_STATIC_LONG_BASE_US <= HONDA_STATIC_LONG_SPAN_US {
+        if duration >= HONDA_STATIC_LONG_BASE_US
+            && duration - HONDA_STATIC_LONG_BASE_US <= HONDA_STATIC_LONG_SPAN_US
+        {
             self.push_symbol(sym);
             self.push_symbol(sym);
             return None;
@@ -357,7 +361,10 @@ impl ProtocolDecoder for HondaStaticDecoder {
             signal.push(LevelDuration::new(true, HONDA_STATIC_SYNC_TIME_US));
 
             for i in 0..HONDA_STATIC_PREAMBLE_ALTERNATING_COUNT {
-                signal.push(LevelDuration::new((i & 1) != 0, HONDA_STATIC_ELEMENT_TIME_US));
+                signal.push(LevelDuration::new(
+                    (i & 1) != 0,
+                    HONDA_STATIC_ELEMENT_TIME_US,
+                ));
             }
 
             for bit_idx in 0..MIN_COUNT_BIT {

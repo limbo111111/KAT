@@ -28,10 +28,9 @@ fn walk_for_imports(dir: &Path, out: &mut Vec<PathBuf>) {
         let path = entry.path();
         if path.is_dir() {
             walk_for_imports(&path, out);
-        } else if path.is_file() {
-            if path.extension().map_or(false, |e| e == "fob" || e == "sub") {
+        } else if path.is_file()
+            && path.extension().is_some_and(|e| e == "fob" || e == "sub") {
                 out.push(path);
             }
-        }
     }
 }

@@ -81,7 +81,7 @@ impl ChryslerDecoder {
         let msb = (d[0] >> 7) & 1;
 
         let b1_xor_b6 = d[1] ^ d[6];
-        let mut btn = 0;
+        let btn;
         if msb == 0 {
             if b1_xor_b6 == 0x04 {
                 btn = 0x01;
@@ -267,11 +267,10 @@ impl ProtocolDecoder for ChryslerDecoder {
                             self.step = DecoderStep::Reset;
                         }
                     } else {
-                        if self.bit_count >= DATA_BITS {
-                            if self.validate() {
+                        if self.bit_count >= DATA_BITS
+                            && self.validate() {
                                 result = Some(self.parse_data());
                             }
-                        }
                         self.step = DecoderStep::Reset;
                     }
                 }

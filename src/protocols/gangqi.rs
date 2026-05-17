@@ -85,7 +85,7 @@ impl ProtocolDecoder for GangQiDecoder {
                         && duration_diff!(duration, TE_LONG) < TE_DELTA
                     {
                         // Bit 0 is short and long timing
-                        self.decode_data = (self.decode_data << 1) | 0;
+                        self.decode_data <<= 1;
                         self.decode_count_bit += 1;
                         self.step = DecoderStep::SaveDuration;
                     } else if duration_diff!(self.te_last, TE_LONG) < TE_DELTA
@@ -98,7 +98,7 @@ impl ProtocolDecoder for GangQiDecoder {
                     } else if duration_diff!(duration, TE_LONG * 2) < TE_DELTA * 3 {
                         // End of the key
                         if duration_diff!(self.te_last, TE_SHORT) < TE_DELTA {
-                            self.decode_data = (self.decode_data << 1) | 0;
+                            self.decode_data <<= 1;
                             self.decode_count_bit += 1;
                         }
                         if duration_diff!(self.te_last, TE_LONG) < TE_DELTA {
