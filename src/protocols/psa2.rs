@@ -367,10 +367,12 @@ impl ProtocolDecoder for Psa2Decoder {
                         self.add_bit(bit);
                     }
                 } else {
-                    if !level && duration_diff!(duration, TE_END_1000) < 199 {
-                        if self.bit_count == 80 && (self.data_low & 0xF) == 0xA {
-                             return self.finalize_frame();
-                        }
+                    if !level
+                        && duration_diff!(duration, TE_END_1000) < 199
+                        && self.bit_count == 80
+                        && (self.data_low & 0xF) == 0xA
+                    {
+                        return self.finalize_frame();
                     }
 
                     self.state = DecoderState::WaitEdge;
@@ -422,7 +424,7 @@ impl ProtocolDecoder for Psa2Decoder {
                     }
                 } else {
                     let is_short = duration_diff!(duration, TE_SHORT_HALF) < TE_DELTA_HALF;
-                    let is_long = duration >= TE_LONG_HALF && duration < 300; // TE_LONG_HALF matching C
+                    let is_long = (TE_LONG_HALF..300).contains(&duration); // TE_LONG_HALF matching C
 
                     if is_short || is_long {
                         let event_is_short = is_short;
@@ -488,20 +490,24 @@ impl ProtocolDecoder for Psa2Decoder {
             // Ptr restoration is omitted since we are recreating completely
             buffer[0] = buffer[2] ^ buffer[6];
             buffer[1] = buffer[3] ^ buffer[7];
-
         } else {
             te_short = TE_SHORT_HALF;
             te_long_sync = TE_LONG_HALF;
             end_dur = TE_END_500;
 
-            let mut v0 = ((serial & 0xFFFFFF) << 8) |
-                         ((button as u32 & 0xF) << 4) |
-                         ((counter >> 24) & 0x0F);
-            let mut v1 = ((counter & 0xFFFFFF) << 8) | 0;
+            let mut v0 = ((serial & 0xFFFFFF) << 8)
+                | ((button as u32 & 0xF) << 4)
+                | ((counter >> 24) & 0x0F);
+            let mut v1 = (counter & 0xFFFFFF) << 8;
 
             let crc8 = {
-                let crc_val = ((v0 >> 24) & 0xFF) + ((v0 >> 16) & 0xFF) + ((v0 >> 8) & 0xFF) + (v0 & 0xFF) +
-                              ((v1 >> 24) & 0xFF) + ((v1 >> 16) & 0xFF) + ((v1 >> 8) & 0xFF);
+                let crc_val = ((v0 >> 24) & 0xFF)
+                    + ((v0 >> 16) & 0xFF)
+                    + ((v0 >> 8) & 0xFF)
+                    + (v0 & 0xFF)
+                    + ((v1 >> 24) & 0xFF)
+                    + ((v1 >> 16) & 0xFF)
+                    + ((v1 >> 8) & 0xFF);
                 crc_val & 0xFF
             };
             v1 = (v1 & 0xFFFFFF00) | crc8;
@@ -531,8 +537,14 @@ impl ProtocolDecoder for Psa2Decoder {
             buffer[1] = buffer[3] ^ buffer[7];
         }
 
-        let k1h = ((buffer[0] as u32) << 24) | ((buffer[1] as u32) << 16) | ((buffer[2] as u32) << 8) | buffer[3] as u32;
-        let k1l = ((buffer[4] as u32) << 24) | ((buffer[5] as u32) << 16) | ((buffer[6] as u32) << 8) | buffer[7] as u32;
+        let k1h = ((buffer[0] as u32) << 24)
+            | ((buffer[1] as u32) << 16)
+            | ((buffer[2] as u32) << 8)
+            | buffer[3] as u32;
+        let k1l = ((buffer[4] as u32) << 24)
+            | ((buffer[5] as u32) << 16)
+            | ((buffer[6] as u32) << 8)
+            | buffer[7] as u32;
         let vf = ((buffer[8] as u16) << 8) | buffer[9] as u16;
 
         let mut signal = Vec::with_capacity(512);

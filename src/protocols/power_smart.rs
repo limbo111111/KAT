@@ -4,8 +4,8 @@
 
 use super::{DecodedSignal, ProtocolDecoder, ProtocolTiming};
 use crate::duration_diff;
+use crate::protocols::common::{common_manchester_advance, CommonManchesterState};
 use crate::radio::demodulator::LevelDuration;
-use crate::protocols::common::{CommonManchesterState, common_manchester_advance};
 
 const TE_SHORT: u32 = 225;
 const TE_LONG: u32 = 450;
@@ -35,7 +35,7 @@ impl PowerSmartDecoder {
         let data_1 = ((packet >> 40) & 0xFFFF) as u32;
         let data_2 = (((!packet) >> 8) & 0xFFFF) as u32;
         let data_3 = ((packet >> 32) & 0xFF) as u8;
-        let data_4 = ((((!packet) & 0xFF) as u8).wrapping_sub(1)) as u8;
+        let data_4 = (((!packet) & 0xFF) as u8).wrapping_sub(1);
 
         data_1 == data_2 && data_3 == data_4
     }
@@ -90,30 +90,30 @@ impl ProtocolDecoder for PowerSmartDecoder {
                 self.decode_count_bit += 1;
             }
 
-            if (self.decode_data & POWER_SMART_PACKET_HEADER_MASK) == POWER_SMART_PACKET_HEADER {
-                if Self::check_valid(self.decode_data) {
-                    let packet = self.decode_data;
+            if (self.decode_data & POWER_SMART_PACKET_HEADER_MASK) == POWER_SMART_PACKET_HEADER
+                && Self::check_valid(self.decode_data)
+            {
+                let packet = self.decode_data;
 
-                    let btn = (((packet >> 54) & 0x02) | ((packet >> 40) & 0x1)) as u8;
-                    let serial = (((packet >> 33) & 0x3FFF00) | ((packet >> 32) & 0xFF)) as u32;
-                    let cnt = ((packet >> 49) & 0x3F) as u16;
+                let btn = (((packet >> 54) & 0x02) | ((packet >> 40) & 0x1)) as u8;
+                let serial = (((packet >> 33) & 0x3FFF00) | ((packet >> 32) & 0xFF)) as u32;
+                let cnt = ((packet >> 49) & 0x3F) as u16;
 
-                    let res = DecodedSignal {
-                        serial: Some(serial),
-                        button: Some(btn),
-                        counter: Some(cnt),
-                        crc_valid: true,
-                        data: packet,
-                        data_count_bit: MIN_COUNT_BIT,
-                        encoder_capable: true,
-                        extra: None,
-                        protocol_display_name: None,
-                    };
+                let res = DecodedSignal {
+                    serial: Some(serial),
+                    button: Some(btn),
+                    counter: Some(cnt),
+                    crc_valid: true,
+                    data: packet,
+                    data_count_bit: MIN_COUNT_BIT,
+                    encoder_capable: true,
+                    extra: None,
+                    protocol_display_name: None,
+                };
 
-                    self.decode_data = 0;
-                    self.decode_count_bit = 0;
-                    return Some(res);
-                }
+                self.decode_data = 0;
+                self.decode_count_bit = 0;
+                return Some(res);
             }
         } else {
             self.decode_data = 0;

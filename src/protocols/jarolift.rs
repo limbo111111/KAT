@@ -1,5 +1,5 @@
-use super::{ProtocolDecoder, ProtocolTiming, DecodedSignal};
 use super::common::{add_bit, reverse_key};
+use super::{DecodedSignal, ProtocolDecoder, ProtocolTiming};
 use crate::duration_diff;
 use crate::radio::demodulator::LevelDuration;
 
@@ -120,12 +120,14 @@ impl ProtocolDecoder for JaroliftDecoder {
                         self.decode_data_2 = self.decode_data;
                         self.decode_data = 0;
                     }
-                    if duration_diff!(self.te_last, TE_SHORT) < TE_DELTA &&
-                       duration_diff!(duration, TE_LONG) < TE_DELTA {
+                    if duration_diff!(self.te_last, TE_SHORT) < TE_DELTA
+                        && duration_diff!(duration, TE_LONG) < TE_DELTA
+                    {
                         add_bit(&mut self.decode_data, &mut self.decode_count_bit, true);
                         self.step = DecoderStep::SaveDuration;
-                    } else if duration_diff!(self.te_last, TE_LONG) < TE_DELTA &&
-                              duration_diff!(duration, TE_SHORT) < TE_DELTA {
+                    } else if duration_diff!(self.te_last, TE_LONG) < TE_DELTA
+                        && duration_diff!(duration, TE_SHORT) < TE_DELTA
+                    {
                         add_bit(&mut self.decode_data, &mut self.decode_count_bit, false);
                         self.step = DecoderStep::SaveDuration;
                     } else {

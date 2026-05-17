@@ -210,7 +210,7 @@ impl Capture {
     /// Get data as hex string
     pub fn data_hex(&self) -> String {
         if self.data_count_bit > 0 {
-            let bytes = (self.data_count_bit + 7) / 8;
+            let bytes = self.data_count_bit.div_ceil(8);
             format!("{:0width$X}", self.data, width = bytes * 2)
         } else {
             "-".to_string()

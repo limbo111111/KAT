@@ -1,5 +1,5 @@
-use super::{ProtocolDecoder, ProtocolTiming, DecodedSignal};
 use super::common::add_bit;
+use super::{DecodedSignal, ProtocolDecoder, ProtocolTiming};
 use crate::duration_diff;
 use crate::radio::demodulator::LevelDuration;
 
@@ -96,7 +96,9 @@ impl ProtocolDecoder for IntertechnoV3Decoder {
                 if !level {
                     if duration >= TE_SHORT * 11 {
                         self.step = DecoderStep::StartSync;
-                        if self.decode_count_bit == MIN_COUNT_BIT_FOR_FOUND || self.decode_count_bit == DIMMING_COUNT_BIT {
+                        if self.decode_count_bit == MIN_COUNT_BIT_FOR_FOUND
+                            || self.decode_count_bit == DIMMING_COUNT_BIT
+                        {
                             let data = self.decode_data;
                             let count = self.decode_count_bit;
 
@@ -144,17 +146,20 @@ impl ProtocolDecoder for IntertechnoV3Decoder {
             }
             DecoderStep::CheckDuration => {
                 if level {
-                    if duration_diff!(self.te_last, TE_SHORT) < TE_DELTA &&
-                       duration_diff!(duration, TE_SHORT) < TE_DELTA {
+                    if duration_diff!(self.te_last, TE_SHORT) < TE_DELTA
+                        && duration_diff!(duration, TE_SHORT) < TE_DELTA
+                    {
                         add_bit(&mut self.decode_data, &mut self.decode_count_bit, false);
                         self.step = DecoderStep::EndDuration;
-                    } else if duration_diff!(self.te_last, TE_LONG) < TE_DELTA * 2 &&
-                              duration_diff!(duration, TE_SHORT) < TE_DELTA {
+                    } else if duration_diff!(self.te_last, TE_LONG) < TE_DELTA * 2
+                        && duration_diff!(duration, TE_SHORT) < TE_DELTA
+                    {
                         add_bit(&mut self.decode_data, &mut self.decode_count_bit, true);
                         self.step = DecoderStep::EndDuration;
-                    } else if duration_diff!(self.te_last, TE_SHORT) < TE_DELTA * 2 &&
-                              duration_diff!(duration, TE_SHORT) < TE_DELTA &&
-                              self.decode_count_bit == 27 {
+                    } else if duration_diff!(self.te_last, TE_SHORT) < TE_DELTA * 2
+                        && duration_diff!(duration, TE_SHORT) < TE_DELTA
+                        && self.decode_count_bit == 27
+                    {
                         // dimm_state
                         add_bit(&mut self.decode_data, &mut self.decode_count_bit, false);
                         self.step = DecoderStep::EndDuration;
@@ -166,8 +171,10 @@ impl ProtocolDecoder for IntertechnoV3Decoder {
                 }
             }
             DecoderStep::EndDuration => {
-                if !level && (duration_diff!(duration, TE_SHORT) < TE_DELTA ||
-                              duration_diff!(duration, TE_LONG) < TE_DELTA * 2) {
+                if !level
+                    && (duration_diff!(duration, TE_SHORT) < TE_DELTA
+                        || duration_diff!(duration, TE_LONG) < TE_DELTA * 2)
+                {
                     self.step = DecoderStep::StartDuration;
                 } else {
                     self.step = DecoderStep::Reset;
@@ -194,7 +201,8 @@ impl ProtocolDecoder for IntertechnoV3Decoder {
 
         let count = decoded.data_count_bit;
         for i in (1..=count).rev() {
-            if count == DIMMING_COUNT_BIT && i == 10 { // C logic reads bit_read(data, i - 1), when i==9 logic has i==9, our loop runs from count down to 1. 9 means bit_index 8, but it says "i == 9", so checking for index 9. Let's adapt exactly: `if (i == 10)` in rust means index 9. Wait, in C `i` loops `data_count_bit` down to 1. `i == 9` means 9th bit.
+            if count == DIMMING_COUNT_BIT && i == 10 {
+                // C logic reads bit_read(data, i - 1), when i==9 logic has i==9, our loop runs from count down to 1. 9 means bit_index 8, but it says "i == 9", so checking for index 9. Let's adapt exactly: `if (i == 10)` in rust means index 9. Wait, in C `i` loops `data_count_bit` down to 1. `i == 9` means 9th bit.
                 // send bit dimm
                 upload.push(LevelDuration::new(true, TE_SHORT));
                 upload.push(LevelDuration::new(false, TE_SHORT));

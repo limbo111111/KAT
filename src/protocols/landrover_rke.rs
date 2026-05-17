@@ -51,7 +51,7 @@ impl LandRoverRkeDecoder {
     }
 
     fn in_range(measured: u32, ref_val: u32) -> bool {
-        let diff = if measured > ref_val { measured - ref_val } else { ref_val - measured };
+        let diff = measured.abs_diff(ref_val);
         (diff * 100) <= (ref_val * LR_TOLERANCE_PCT)
     }
 }
@@ -83,21 +83,19 @@ impl ProtocolDecoder for LandRoverRkeDecoder {
     fn feed(&mut self, level: bool, duration: u32) -> Option<DecodedSignal> {
         match self.step {
             DecoderStep::Reset => {
-                if level {
-                    if Self::in_range(duration, LR_SYNC_HIGH_US) {
+                if level
+                    && Self::in_range(duration, LR_SYNC_HIGH_US) {
                         self.te_last = duration;
                         self.step = DecoderStep::SaveDuration;
                     }
-                }
             }
             DecoderStep::SaveDuration => {
-                if !level {
-                    if Self::in_range(self.te_last, LR_SYNC_HIGH_US) && Self::in_range(duration, LR_SYNC_LOW_US) {
+                if !level
+                    && Self::in_range(self.te_last, LR_SYNC_HIGH_US) && Self::in_range(duration, LR_SYNC_LOW_US) {
                         self.bit_count = 0;
                         self.step = DecoderStep::CheckDuration;
                         return None;
                     }
-                }
                 self.step = DecoderStep::Reset;
             }
             DecoderStep::CheckDuration => {

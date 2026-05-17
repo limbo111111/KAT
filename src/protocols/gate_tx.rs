@@ -118,7 +118,7 @@ impl ProtocolDecoder for GateTxDecoder {
                 if level {
                     if duration_diff!(self.te_last, TE_SHORT) < TE_DELTA &&
                        duration_diff!(duration, TE_LONG) < TE_DELTA * 3 {
-                        self.decode_data = (self.decode_data << 1) | 0;
+                        self.decode_data <<= 1;
                         self.decode_count_bit += 1;
                         self.step = DecoderStep::SaveDuration;
                     } else if duration_diff!(self.te_last, TE_LONG) < TE_DELTA * 3 &&

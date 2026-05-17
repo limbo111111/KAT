@@ -102,8 +102,8 @@ impl ProtocolDecoder for FiatSpaDecoder {
                     if duration_diff!(duration_us, TE_SHORT) < TE_DELTA {
                         self.preamble_count += 1;
                     } else {
-                        if self.preamble_count >= PREAMBLE_PAIRS {
-                            if duration_diff!(duration_us, GAP_US) < TE_DELTA {
+                        if self.preamble_count >= PREAMBLE_PAIRS
+                            && duration_diff!(duration_us, GAP_US) < TE_DELTA {
                                 self.step = DecoderStep::Data;
                                 self.preamble_count = 0;
                                 self.data_low = 0;
@@ -112,7 +112,6 @@ impl ProtocolDecoder for FiatSpaDecoder {
                                 self.manchester_state = CommonManchesterState::Mid1;
                                 return None;
                             }
-                        }
                         self.step = DecoderStep::Reset;
                     }
                 }

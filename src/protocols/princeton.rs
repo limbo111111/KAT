@@ -104,8 +104,9 @@ impl ProtocolDecoder for PrincetonDecoder {
                             if self.last_data == self.decode_data && self.last_data != 0 {
                                 self.te /= (self.decode_count_bit as u32 * 4) + 1;
 
-                                let mut guard_time = (duration as f32 / self.te as f32).round() as u32;
-                                if guard_time < 15 || guard_time > 72 {
+                                let mut guard_time =
+                                    (duration as f32 / self.te as f32).round() as u32;
+                                if !(15..=72).contains(&guard_time) {
                                     guard_time = PRINCETON_GUARD_TIME_DEFAULT;
                                 }
                                 self.guard_time = guard_time;
@@ -113,13 +114,14 @@ impl ProtocolDecoder for PrincetonDecoder {
                                 let data = self.decode_data;
                                 let bit_count = self.decode_count_bit;
 
-                                let (serial, btn) = if (data & 0xFF) == 0x30 || (data & 0xFF) == 0xC0 {
-                                    ((data >> 8) as u32, (data & 0xFF) as u8)
-                                } else if (data & 0xFF) == 0x03 || (data & 0xFF) == 0x0C {
-                                    ((data >> 8) as u32, ((data & 0xFF) | 0xF0) as u8)
-                                } else {
-                                    ((data >> 4) as u32, (data & 0xF) as u8)
-                                };
+                                let (serial, btn) =
+                                    if (data & 0xFF) == 0x30 || (data & 0xFF) == 0xC0 {
+                                        ((data >> 8) as u32, (data & 0xFF) as u8)
+                                    } else if (data & 0xFF) == 0x03 || (data & 0xFF) == 0x0C {
+                                        ((data >> 8) as u32, ((data & 0xFF) | 0xF0) as u8)
+                                    } else {
+                                        ((data >> 4) as u32, (data & 0xF) as u8)
+                                    };
 
                                 let signal = DecodedSignal {
                                     serial: Some(serial),
@@ -175,7 +177,7 @@ impl ProtocolDecoder for PrincetonDecoder {
     }
 
     fn encode(&self, decoded: &DecodedSignal, button: u8) -> Option<Vec<LevelDuration>> {
-        let mut data = decoded.data;
+        let data;
         let serial = decoded.serial.unwrap_or(0);
         let mut btn = button;
 
@@ -200,7 +202,11 @@ impl ProtocolDecoder for PrincetonDecoder {
         let mut signal = Vec::with_capacity((decoded.data_count_bit * 2) + 2);
 
         let te = if self.te > 0 { self.te } else { TE_SHORT };
-        let guard_time = if self.guard_time > 0 { self.guard_time } else { PRINCETON_GUARD_TIME_DEFAULT };
+        let guard_time = if self.guard_time > 0 {
+            self.guard_time
+        } else {
+            PRINCETON_GUARD_TIME_DEFAULT
+        };
 
         for i in (0..decoded.data_count_bit).rev() {
             if (data >> i) & 1 == 1 {

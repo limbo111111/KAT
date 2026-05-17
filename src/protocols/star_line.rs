@@ -108,10 +108,7 @@ impl StarLineDecoder {
 }
 
 /// Collect 64-bit Star Line payload from level+duration pairs (for keeloq_generic fallback).
-pub fn collect_star_line_bits(
-    pairs: &[LevelDuration],
-    invert_level: bool,
-) -> Option<u64> {
+pub fn collect_star_line_bits(pairs: &[LevelDuration], invert_level: bool) -> Option<u64> {
     let mut step = DecoderStep::Reset;
     let mut header_count = 0u16;
     let mut decode_data = 0u64;
@@ -119,7 +116,11 @@ pub fn collect_star_line_bits(
     let mut te_last = 0u32;
 
     for pair in pairs {
-        let level = if invert_level { !pair.level } else { pair.level };
+        let level = if invert_level {
+            !pair.level
+        } else {
+            pair.level
+        };
         let duration = pair.duration_us;
 
         match step {
@@ -150,7 +151,7 @@ pub fn collect_star_line_bits(
                 if level {
                     if duration >= (TE_LONG + TE_DELTA) {
                         step = DecoderStep::Reset;
-                        if decode_count_bit >= MIN_COUNT_BIT && decode_count_bit <= MIN_COUNT_BIT + 2 {
+                        if (MIN_COUNT_BIT..=MIN_COUNT_BIT + 2).contains(&decode_count_bit) {
                             return Some(decode_data);
                         }
                         decode_data = 0;
@@ -170,7 +171,7 @@ pub fn collect_star_line_bits(
                         && duration_diff!(duration, TE_SHORT) < TE_DELTA
                     {
                         if decode_count_bit < MIN_COUNT_BIT {
-                            decode_data = (decode_data << 1) | 0;
+                            decode_data <<= 1;
                             decode_count_bit += 1;
                         } else {
                             decode_count_bit += 1;
@@ -285,7 +286,7 @@ impl ProtocolDecoder for StarLineDecoder {
                     {
                         // Bit 0: short HIGH + short LOW
                         if self.decode_count_bit < MIN_COUNT_BIT {
-                            self.decode_data = (self.decode_data << 1) | 0;
+                            self.decode_data <<= 1;
                             self.decode_count_bit += 1;
                         } else {
                             self.decode_count_bit += 1;
@@ -323,9 +324,7 @@ impl ProtocolDecoder for StarLineDecoder {
         let counter = decoded.counter.unwrap_or(0).wrapping_add(1);
 
         let fix = ((button as u32) << 24) | (serial & 0x00FFFFFF);
-        let plaintext = ((button as u32) << 24)
-            | (((serial & 0xFF) as u32) << 16)
-            | (counter as u32);
+        let plaintext = ((button as u32) << 24) | ((serial & 0xFF) << 16) | (counter as u32);
 
         let mf_key = Self::get_mf_key();
         let hop = if mf_key != 0 {

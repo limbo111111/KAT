@@ -1,7 +1,7 @@
 use super::{DecodedSignal, ProtocolDecoder, ProtocolTiming};
 use crate::duration_diff;
-use crate::radio::demodulator::LevelDuration;
 use crate::protocols::keeloq_common;
+use crate::radio::demodulator::LevelDuration;
 
 const TE_SHORT: u32 = 400;
 const TE_LONG: u32 = 800;
@@ -24,17 +24,12 @@ impl SheriffCfmModel {
 }
 
 const CFM_PI_BYTES: [u8; 16] = [
-    0xA4, 0x58, 0xFE, 0xA3, 0xF4, 0x93, 0x3D, 0x7E,
-    0x0D, 0x95, 0x74, 0x8F, 0x72, 0x8E, 0xB6, 0x58,
+    0xA4, 0x58, 0xFE, 0xA3, 0xF4, 0x93, 0x3D, 0x7E, 0x0D, 0x95, 0x74, 0x8F, 0x72, 0x8E, 0xB6, 0x58,
 ];
 
-const CFM_ZX750_ENCODED: [u8; 8] = [
-    0x32, 0x4D, 0xCB, 0x84, 0x5F, 0xE9, 0x27, 0xCB,
-];
+const CFM_ZX750_ENCODED: [u8; 8] = [0x32, 0x4D, 0xCB, 0x84, 0x5F, 0xE9, 0x27, 0xCB];
 
-const CFM_ZX930_ENCODED: [u8; 8] = [
-    0x94, 0x3B, 0x63, 0xA5, 0xE8, 0xF3, 0xAB, 0x60,
-];
+const CFM_ZX930_ENCODED: [u8; 8] = [0x94, 0x3B, 0x63, 0xA5, 0xE8, 0xF3, 0xAB, 0x60];
 
 fn cfm_pi_decode(encoded: &[u8; 8], pi_offset: usize) -> [u8; 8] {
     let mut out = [0u8; 8];
@@ -45,15 +40,15 @@ fn cfm_pi_decode(encoded: &[u8; 8], pi_offset: usize) -> [u8; 8] {
 }
 
 fn cfm_rlf(in_val: u8) -> u8 {
-    (in_val << 1) | (in_val >> 7)
+    in_val.rotate_left(1)
 }
 
 fn cfm_rrf(in_val: u8) -> u8 {
-    (in_val >> 1) | (in_val << 7)
+    in_val.rotate_right(1)
 }
 
 fn cfm_swap(in_val: u8) -> u8 {
-    (in_val << 4) | (in_val >> 4)
+    in_val.rotate_right(4)
 }
 
 fn cfm_decrypt_transform(hop: &mut [u8; 4], model: SheriffCfmModel) {
@@ -64,9 +59,7 @@ fn cfm_decrypt_transform(hop: &mut [u8; 4], model: SheriffCfmModel) {
         }
         SheriffCfmModel::ZX930 => {
             hop[0] = !hop[0];
-            let temp = hop[1];
-            hop[1] = hop[2];
-            hop[2] = temp;
+            hop.swap(1, 2);
             hop[0] = cfm_rrf(hop[0]);
             hop[1] = cfm_swap(hop[1]);
             hop[1] = cfm_rlf(hop[1]);
@@ -87,9 +80,7 @@ fn cfm_encrypt_transform(hop: &mut [u8; 4], model: SheriffCfmModel) {
             hop[1] = cfm_swap(hop[1]);
             hop[0] = cfm_rlf(hop[0]);
             hop[0] = !hop[0];
-            let temp = hop[1];
-            hop[1] = hop[2];
-            hop[2] = temp;
+            hop.swap(1, 2);
         }
     }
 }
@@ -210,7 +201,9 @@ impl ProtocolDecoder for SheriffCfmDecoder {
             DecoderStep::CheckPreamble => {
                 if !level && duration_diff!(duration, TE_SHORT) < TE_DELTA {
                     self.step = DecoderStep::Reset;
-                } else if self.header_count > 2 && duration_diff!(duration, TE_SHORT * 10) < TE_DELTA * 10 {
+                } else if self.header_count > 2
+                    && duration_diff!(duration, TE_SHORT * 10) < TE_DELTA * 10
+                {
                     self.step = DecoderStep::SaveDuration;
                     self.decode_data = 0;
                     self.decode_count_bit = 0;
@@ -229,8 +222,12 @@ impl ProtocolDecoder for SheriffCfmDecoder {
                 if !level {
                     if duration >= (TE_SHORT * 2 + TE_DELTA) {
                         self.step = DecoderStep::Reset;
-                        if self.decode_count_bit >= MIN_COUNT_BIT && self.decode_count_bit <= MIN_COUNT_BIT + 2 {
-                            if let Some((model, btn, serial, cnt)) = cfm_try_decrypt(self.decode_data) {
+                        if self.decode_count_bit >= MIN_COUNT_BIT
+                            && self.decode_count_bit <= MIN_COUNT_BIT + 2
+                        {
+                            if let Some((model, btn, serial, cnt)) =
+                                cfm_try_decrypt(self.decode_data)
+                            {
                                 self.model = Some(model);
                                 let result = DecodedSignal {
                                     serial: Some(serial),
@@ -252,15 +249,19 @@ impl ProtocolDecoder for SheriffCfmDecoder {
                         self.decode_data = 0;
                         self.decode_count_bit = 0;
                         self.header_count = 0;
-                    } else if duration_diff!(self.te_last, TE_SHORT) < TE_DELTA && duration_diff!(duration, TE_LONG) < TE_DELTA * 2 {
+                    } else if duration_diff!(self.te_last, TE_SHORT) < TE_DELTA
+                        && duration_diff!(duration, TE_LONG) < TE_DELTA * 2
+                    {
                         if self.decode_count_bit < MIN_COUNT_BIT {
                             self.decode_data = (self.decode_data << 1) | 1;
                         }
                         self.decode_count_bit += 1;
                         self.step = DecoderStep::SaveDuration;
-                    } else if duration_diff!(self.te_last, TE_LONG) < TE_DELTA * 2 && duration_diff!(duration, TE_SHORT) < TE_DELTA {
+                    } else if duration_diff!(self.te_last, TE_LONG) < TE_DELTA * 2
+                        && duration_diff!(duration, TE_SHORT) < TE_DELTA
+                    {
                         if self.decode_count_bit < MIN_COUNT_BIT {
-                            self.decode_data = (self.decode_data << 1) | 0;
+                            self.decode_data <<= 1;
                         }
                         self.decode_count_bit += 1;
                         self.step = DecoderStep::SaveDuration;

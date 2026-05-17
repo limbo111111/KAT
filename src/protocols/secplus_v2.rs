@@ -105,13 +105,32 @@ impl SecPlusV2Decoder {
 
     fn mix_invert(invert: u8, p: &mut [u16; 3]) -> bool {
         match invert {
-            0x00 => { p[0] = !p[0] & 0x03FF; p[1] = !p[1] & 0x03FF; }
-            0x01 => { p[1] = !p[1] & 0x03FF; }
-            0x02 => { p[2] = !p[2] & 0x03FF; }
-            0x04 => { p[0] = !p[0] & 0x03FF; p[1] = !p[1] & 0x03FF; p[2] = !p[2] & 0x03FF; }
-            0x05 | 0x0A => { p[0] = !p[0] & 0x03FF; p[2] = !p[2] & 0x03FF; }
-            0x06 => { p[1] = !p[1] & 0x03FF; p[2] = !p[2] & 0x03FF; }
-            0x08 => { p[0] = !p[0] & 0x03FF; }
+            0x00 => {
+                p[0] = !p[0] & 0x03FF;
+                p[1] = !p[1] & 0x03FF;
+            }
+            0x01 => {
+                p[1] = !p[1] & 0x03FF;
+            }
+            0x02 => {
+                p[2] = !p[2] & 0x03FF;
+            }
+            0x04 => {
+                p[0] = !p[0] & 0x03FF;
+                p[1] = !p[1] & 0x03FF;
+                p[2] = !p[2] & 0x03FF;
+            }
+            0x05 | 0x0A => {
+                p[0] = !p[0] & 0x03FF;
+                p[2] = !p[2] & 0x03FF;
+            }
+            0x06 => {
+                p[1] = !p[1] & 0x03FF;
+                p[2] = !p[2] & 0x03FF;
+            }
+            0x08 => {
+                p[0] = !p[0] & 0x03FF;
+            }
             0x09 => {}
             _ => return false,
         }
@@ -123,11 +142,28 @@ impl SecPlusV2Decoder {
         let b = p[1];
         let c = p[2];
         match order {
-            0x06 | 0x09 => { p[2] = a; p[0] = c; }
-            0x08 | 0x04 => { p[1] = a; p[2] = b; p[0] = c; }
-            0x01 => { p[2] = a; p[0] = b; p[1] = c; }
-            0x00 => { p[2] = b; p[1] = c; }
-            0x05 => { p[1] = a; p[0] = b; }
+            0x06 | 0x09 => {
+                p[2] = a;
+                p[0] = c;
+            }
+            0x08 | 0x04 => {
+                p[1] = a;
+                p[2] = b;
+                p[0] = c;
+            }
+            0x01 => {
+                p[2] = a;
+                p[0] = b;
+                p[1] = c;
+            }
+            0x00 => {
+                p[2] = b;
+                p[1] = c;
+            }
+            0x05 => {
+                p[1] = a;
+                p[0] = b;
+            }
             0x02 | 0x0A => {}
             _ => return false,
         }
@@ -135,16 +171,40 @@ impl SecPlusV2Decoder {
     }
 
     fn mix_order_encode(order: u8, p: &mut [u16; 3]) -> bool {
-        let mut a = 0;
-        let mut b = 0;
-        let mut c = 0;
+        let a;
+        let b;
+        let c;
         match order {
-            0x06 | 0x09 => { a = p[2]; b = p[1]; c = p[0]; }
-            0x08 | 0x04 => { a = p[1]; b = p[2]; c = p[0]; }
-            0x01 => { a = p[2]; b = p[0]; c = p[1]; }
-            0x00 => { a = p[0]; b = p[2]; c = p[1]; }
-            0x05 => { a = p[1]; b = p[0]; c = p[2]; }
-            0x02 | 0x0A => { a = p[0]; b = p[1]; c = p[2]; }
+            0x06 | 0x09 => {
+                a = p[2];
+                b = p[1];
+                c = p[0];
+            }
+            0x08 | 0x04 => {
+                a = p[1];
+                b = p[2];
+                c = p[0];
+            }
+            0x01 => {
+                a = p[2];
+                b = p[0];
+                c = p[1];
+            }
+            0x00 => {
+                a = p[0];
+                b = p[2];
+                c = p[1];
+            }
+            0x05 => {
+                a = p[1];
+                b = p[0];
+                c = p[2];
+            }
+            0x02 | 0x0A => {
+                a = p[0];
+                b = p[1];
+                c = p[2];
+            }
             _ => return false,
         }
         p[0] = a;
@@ -160,24 +220,36 @@ impl SecPlusV2Decoder {
 
         for i in (0..=29).rev().step_by(3) {
             p[0] = (p[0] << 1) | (((data >> i) & 1) as u16);
-            if i >= 1 { p[1] = (p[1] << 1) | (((data >> (i - 1)) & 1) as u16); }
-            if i >= 2 { p[2] = (p[2] << 1) | (((data >> (i - 2)) & 1) as u16); }
+            if i >= 1 {
+                p[1] = (p[1] << 1) | (((data >> (i - 1)) & 1) as u16);
+            }
+            if i >= 2 {
+                p[2] = (p[2] << 1) | (((data >> (i - 2)) & 1) as u16);
+            }
         }
 
-        if !Self::mix_invert(invert, &mut p) { return false; }
-        if !Self::mix_order_decode(order, &mut p) { return false; }
+        if !Self::mix_invert(invert, &mut p) {
+            return false;
+        }
+        if !Self::mix_order_decode(order, &mut p) {
+            return false;
+        }
 
         data = ((order as u64) << 4) | (invert as u64);
         let mut k = 0;
         for i in (0..=6).rev().step_by(2) {
             roll_array[k] = ((data >> i) & 0x03) as u8;
-            if roll_array[k] == 3 { return false; }
+            if roll_array[k] == 3 {
+                return false;
+            }
             k += 1;
         }
 
         for i in (0..=8).rev().step_by(2) {
             roll_array[k] = ((p[2] >> i) & 0x03) as u8;
-            if roll_array[k] == 3 { return false; }
+            if roll_array[k] == 3 {
+                return false;
+            }
             k += 1;
         }
 
@@ -190,18 +262,24 @@ impl SecPlusV2Decoder {
         let mut p = [((fixed >> 10) & 0x3FF) as u16, (fixed & 0x3FF) as u16, 0];
         let order = (roll_array[0] << 2) | roll_array[1];
         let invert = (roll_array[2] << 2) | roll_array[3];
-        p[2] = ((roll_array[4] as u16) << 8) | ((roll_array[5] as u16) << 6) |
-               ((roll_array[6] as u16) << 4) | ((roll_array[7] as u16) << 2) |
-               (roll_array[8] as u16);
+        p[2] = ((roll_array[4] as u16) << 8)
+            | ((roll_array[5] as u16) << 6)
+            | ((roll_array[6] as u16) << 4)
+            | ((roll_array[7] as u16) << 2)
+            | (roll_array[8] as u16);
 
-        if !Self::mix_order_encode(order, &mut p) { return 0; }
-        if !Self::mix_invert(invert, &mut p) { return 0; }
+        if !Self::mix_order_encode(order, &mut p) {
+            return 0;
+        }
+        if !Self::mix_invert(invert, &mut p) {
+            return 0;
+        }
 
         for i in 0..10 {
             data <<= 3;
-            data |= (((p[0] >> (9 - i)) & 1) as u64) << 2 |
-                    (((p[1] >> (9 - i)) & 1) as u64) << 1 |
-                    (((p[2] >> (9 - i)) & 1) as u64);
+            data |= (((p[0] >> (9 - i)) & 1) as u64) << 2
+                | (((p[1] >> (9 - i)) & 1) as u64) << 1
+                | (((p[2] >> (9 - i)) & 1) as u64);
         }
         data |= (order as u64) << 34 | (invert as u64) << 30;
 
@@ -279,58 +357,69 @@ impl ProtocolDecoder for SecPlusV2Decoder {
 
                 if !level {
                     if diff_short < TE_DELTA {
-                        is_adv = true; is_short = true; is_high = false;
+                        is_adv = true;
+                        is_short = true;
+                        is_high = false;
                     } else if diff_long < TE_DELTA {
-                        is_adv = true; is_short = false; is_high = false;
+                        is_adv = true;
+                        is_short = false;
+                        is_high = false;
                     } else if duration >= (TE_LONG * 2 + TE_DELTA) {
-                        if self.decode_count_bit == MIN_COUNT_BIT {
-                            if self.check_packet() {
-                                let mut roll_1 = [0u8; 9];
-                                let mut fixed_1 = 0;
-                                let mut roll_2 = [0u8; 9];
-                                let mut fixed_2 = 0;
+                        if self.decode_count_bit == MIN_COUNT_BIT && self.check_packet() {
+                            let mut roll_1 = [0u8; 9];
+                            let mut fixed_1 = 0;
+                            let mut roll_2 = [0u8; 9];
+                            let mut fixed_2 = 0;
 
-                                if Self::decode_half(self.secplus_packet_1, &mut roll_1, &mut fixed_1) &&
-                                   Self::decode_half(self.decode_data, &mut roll_2, &mut fixed_2) {
+                            if Self::decode_half(self.secplus_packet_1, &mut roll_1, &mut fixed_1)
+                                && Self::decode_half(self.decode_data, &mut roll_2, &mut fixed_2)
+                            {
+                                let mut rolling_digits = [0u8; 18];
+                                rolling_digits[0] = roll_2[8];
+                                rolling_digits[1] = roll_1[8];
+                                rolling_digits[2] = roll_2[4];
+                                rolling_digits[3] = roll_2[5];
+                                rolling_digits[4] = roll_2[6];
+                                rolling_digits[5] = roll_2[7];
+                                rolling_digits[6] = roll_1[4];
+                                rolling_digits[7] = roll_1[5];
+                                rolling_digits[8] = roll_1[6];
+                                rolling_digits[9] = roll_1[7];
+                                rolling_digits[10] = roll_2[0];
+                                rolling_digits[11] = roll_2[1];
+                                rolling_digits[12] = roll_2[2];
+                                rolling_digits[13] = roll_2[3];
+                                rolling_digits[14] = roll_1[0];
+                                rolling_digits[15] = roll_1[1];
+                                rolling_digits[16] = roll_1[2];
+                                rolling_digits[17] = roll_1[3];
 
-                                    let mut rolling_digits = [0u8; 18];
-                                    rolling_digits[0] = roll_2[8]; rolling_digits[1] = roll_1[8];
-                                    rolling_digits[2] = roll_2[4]; rolling_digits[3] = roll_2[5];
-                                    rolling_digits[4] = roll_2[6]; rolling_digits[5] = roll_2[7];
-                                    rolling_digits[6] = roll_1[4]; rolling_digits[7] = roll_1[5];
-                                    rolling_digits[8] = roll_1[6]; rolling_digits[9] = roll_1[7];
-                                    rolling_digits[10] = roll_2[0]; rolling_digits[11] = roll_2[1];
-                                    rolling_digits[12] = roll_2[2]; rolling_digits[13] = roll_2[3];
-                                    rolling_digits[14] = roll_1[0]; rolling_digits[15] = roll_1[1];
-                                    rolling_digits[16] = roll_1[2]; rolling_digits[17] = roll_1[3];
+                                let mut rolling: u32 = 0;
+                                for digit in rolling_digits {
+                                    rolling = (rolling * 3) + digit as u32;
+                                }
 
-                                    let mut rolling: u32 = 0;
-                                    for digit in rolling_digits {
-                                        rolling = (rolling * 3) + digit as u32;
-                                    }
+                                if rolling < 0x10000000 {
+                                    let cnt = Self::reverse_key(rolling, 28) as u16;
+                                    let btn = (fixed_1 >> 12) as u8;
+                                    let serial = (fixed_1 << 20) | fixed_2;
 
-                                    if rolling < 0x10000000 {
-                                        let cnt = Self::reverse_key(rolling, 28) as u16;
-                                        let btn = (fixed_1 >> 12) as u8;
-                                        let serial = (fixed_1 << 20) | fixed_2;
+                                    let data = self.decode_data; // Store packet 2 as representation
+                                    let bit_count = MIN_COUNT_BIT;
 
-                                        let data = self.decode_data; // Store packet 2 as representation
-                                        let bit_count = MIN_COUNT_BIT;
+                                    self.step = DecoderStep::Reset;
 
-                                        self.step = DecoderStep::Reset;
-
-                                        return Some(DecodedSignal {
-                                            serial: Some(serial),
-                                            button: Some(btn),
-                                            counter: Some(cnt),
-                                            crc_valid: true,
-                                            data,
-                                            data_count_bit: bit_count,
-                                            encoder_capable: true,
-                                            extra: Some(self.secplus_packet_1), // Store pack1 in extra
-                                            protocol_display_name: None,
-                                        });
-                                    }
+                                    return Some(DecodedSignal {
+                                        serial: Some(serial),
+                                        button: Some(btn),
+                                        counter: Some(cnt),
+                                        crc_valid: true,
+                                        data,
+                                        data_count_bit: bit_count,
+                                        encoder_capable: true,
+                                        extra: Some(self.secplus_packet_1), // Store pack1 in extra
+                                        protocol_display_name: None,
+                                    });
                                 }
                             }
                         }
@@ -345,9 +434,13 @@ impl ProtocolDecoder for SecPlusV2Decoder {
                     }
                 } else {
                     if diff_short < TE_DELTA {
-                        is_adv = true; is_short = true; is_high = true;
+                        is_adv = true;
+                        is_short = true;
+                        is_high = true;
                     } else if diff_long < TE_DELTA {
-                        is_adv = true; is_short = false; is_high = true;
+                        is_adv = true;
+                        is_short = false;
+                        is_high = true;
                     } else {
                         self.step = DecoderStep::Reset;
                     }
@@ -391,25 +484,35 @@ impl ProtocolDecoder for SecPlusV2Decoder {
         let mut roll_1 = [0u8; 9];
         let mut roll_2 = [0u8; 9];
 
-        roll_2[8] = rolling_digits[0]; roll_1[8] = rolling_digits[1];
-        roll_2[4] = rolling_digits[2]; roll_2[5] = rolling_digits[3];
-        roll_2[6] = rolling_digits[4]; roll_2[7] = rolling_digits[5];
-        roll_1[4] = rolling_digits[6]; roll_1[5] = rolling_digits[7];
-        roll_1[6] = rolling_digits[8]; roll_1[7] = rolling_digits[9];
-        roll_2[0] = rolling_digits[10]; roll_2[1] = rolling_digits[11];
-        roll_2[2] = rolling_digits[12]; roll_2[3] = rolling_digits[13];
-        roll_1[0] = rolling_digits[14]; roll_1[1] = rolling_digits[15];
-        roll_1[2] = rolling_digits[16]; roll_1[3] = rolling_digits[17];
+        roll_2[8] = rolling_digits[0];
+        roll_1[8] = rolling_digits[1];
+        roll_2[4] = rolling_digits[2];
+        roll_2[5] = rolling_digits[3];
+        roll_2[6] = rolling_digits[4];
+        roll_2[7] = rolling_digits[5];
+        roll_1[4] = rolling_digits[6];
+        roll_1[5] = rolling_digits[7];
+        roll_1[6] = rolling_digits[8];
+        roll_1[7] = rolling_digits[9];
+        roll_2[0] = rolling_digits[10];
+        roll_2[1] = rolling_digits[11];
+        roll_2[2] = rolling_digits[12];
+        roll_2[3] = rolling_digits[13];
+        roll_1[0] = rolling_digits[14];
+        roll_1[1] = rolling_digits[15];
+        roll_1[2] = rolling_digits[16];
+        roll_1[3] = rolling_digits[17];
 
         let p1 = SECPLUS_V2_HEADER | SECPLUS_V2_PACKET_1 | Self::encode_half(&roll_1, fixed_1);
         let p2 = SECPLUS_V2_HEADER | SECPLUS_V2_PACKET_2 | Self::encode_half(&roll_2, fixed_2);
 
         let mut signal = Vec::with_capacity(256);
 
-        let add_duration = |sig: &mut Vec<LevelDuration>, event_is_short: bool, event_is_high: bool| {
-            let dur = if event_is_short { TE_SHORT } else { TE_LONG };
-            sig.push(LevelDuration::new(event_is_high, dur));
-        };
+        let add_duration =
+            |sig: &mut Vec<LevelDuration>, event_is_short: bool, event_is_high: bool| {
+                let dur = if event_is_short { TE_SHORT } else { TE_LONG };
+                sig.push(LevelDuration::new(event_is_high, dur));
+            };
 
         for p in [p1, p2] {
             let mut enc_state = ManchesterState::Mid1;
@@ -449,9 +552,25 @@ impl ProtocolDecoder for SecPlusV2Decoder {
                 if is_adv {
                     add_duration(&mut signal, is_short, is_high);
                     let (_, s2, h2) = match enc_state {
-                        ManchesterState::Mid1 => if bit { enc_state = ManchesterState::Start1; (false, true, false) } else { enc_state = ManchesterState::Mid0; (false, false, true) },
-                        ManchesterState::Mid0 => if bit { enc_state = ManchesterState::Mid1; (false, false, false) } else { enc_state = ManchesterState::Start0; (false, true, true) },
-                        _ => (false, true, false)
+                        ManchesterState::Mid1 => {
+                            if bit {
+                                enc_state = ManchesterState::Start1;
+                                (false, true, false)
+                            } else {
+                                enc_state = ManchesterState::Mid0;
+                                (false, false, true)
+                            }
+                        }
+                        ManchesterState::Mid0 => {
+                            if bit {
+                                enc_state = ManchesterState::Mid1;
+                                (false, false, false)
+                            } else {
+                                enc_state = ManchesterState::Start0;
+                                (false, true, true)
+                            }
+                        }
+                        _ => (false, true, false),
                     };
                     add_duration(&mut signal, s2, h2);
                 } else {
