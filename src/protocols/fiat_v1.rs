@@ -267,7 +267,7 @@ impl ProtocolDecoder for FiatV1Decoder {
             // =========================================================
             DecoderStep::Reset => {
                 if level {
-                    if duration >= PREAMBLE_PULSE_MIN && duration <= PREAMBLE_PULSE_MAX {
+                    if (PREAMBLE_PULSE_MIN..=PREAMBLE_PULSE_MAX).contains(&duration) {
                         self.step = DecoderStep::Preamble;
                         self.preamble_count = 1;
                         self.te_sum = duration;
@@ -286,7 +286,7 @@ impl ProtocolDecoder for FiatV1Decoder {
             // transition to Sync.
             // =========================================================
             DecoderStep::Preamble => {
-                if duration >= PREAMBLE_PULSE_MIN && duration <= PREAMBLE_PULSE_MAX {
+                if (PREAMBLE_PULSE_MIN..=PREAMBLE_PULSE_MAX).contains(&duration) {
                     // Pulse in valid preamble range (either HIGH or LOW)
                     self.preamble_count += 1;
                     self.te_sum += duration;
@@ -334,7 +334,7 @@ impl ProtocolDecoder for FiatV1Decoder {
             // HIGH sync pulse in 400-2800us range.
             // =========================================================
             DecoderStep::RetxSync => {
-                if level && duration >= RETX_SYNC_MIN && duration <= RETX_SYNC_MAX {
+                if level && (RETX_SYNC_MIN..=RETX_SYNC_MAX).contains(&duration) {
                     self.prepare_data();
                     self.te_last = duration;
                 } else {

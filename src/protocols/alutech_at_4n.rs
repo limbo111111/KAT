@@ -97,14 +97,14 @@ impl ProtocolDecoder for AlutechAt4nDecoder {
                             self.decode_data = (self.decode_data << 1) | 1;
                             self.decode_count_bit += 1;
                         } else if duration_diff!(self.te_last, TE_LONG) < TE_DELTA * 2 {
-                            self.decode_data = (self.decode_data << 1) | 0;
+                            self.decode_data <<= 1;
                             self.decode_count_bit += 1;
                         }
 
                         self.step = DecoderStep::Reset;
 
                         if self.decode_count_bit >= MIN_COUNT_BIT {
-                            let mut data = self.decode_data;
+                            let data = self.decode_data;
 
                             // CRC byte is sent last and takes up 8 bits
                             let mut tmp_data = data;
@@ -152,7 +152,7 @@ impl ProtocolDecoder for AlutechAt4nDecoder {
                         self.decode_count_bit += 1;
                         self.step = DecoderStep::SaveDuration;
                     } else if duration_diff!(self.te_last, TE_LONG) < TE_DELTA * 2 && duration_diff!(duration, TE_SHORT) < TE_DELTA {
-                        self.decode_data = (self.decode_data << 1) | 0;
+                        self.decode_data <<= 1;
                         self.decode_count_bit += 1;
                         self.step = DecoderStep::SaveDuration;
                     } else {

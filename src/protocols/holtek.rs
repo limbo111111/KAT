@@ -86,8 +86,8 @@ impl ProtocolDecoder for HoltekDecoder {
             DecoderStep::SaveDuration => {
                 if !level {
                     if duration >= TE_SHORT * 10 + TE_DELTA {
-                        if self.decode_count_bit == MIN_COUNT_BIT {
-                            if (self.decode_data & HOLTEK_HEADER_MASK) == HOLTEK_HEADER {
+                        if self.decode_count_bit == MIN_COUNT_BIT
+                            && (self.decode_data & HOLTEK_HEADER_MASK) == HOLTEK_HEADER {
                                 let serial_raw = ((self.decode_data >> 16) & 0xFFFFF) as u32;
                                 let serial = serial_raw.reverse_bits() >> (32 - 20); // reverse 20 bits
 
@@ -121,7 +121,6 @@ impl ProtocolDecoder for HoltekDecoder {
                                 self.step = DecoderStep::FoundStartBit;
                                 return Some(result);
                             }
-                        }
 
                         self.decode_data = 0;
                         self.decode_count_bit = 0;
@@ -139,7 +138,7 @@ impl ProtocolDecoder for HoltekDecoder {
                     if duration_diff!(self.te_last, TE_SHORT) < TE_DELTA
                         && duration_diff!(duration, TE_LONG) < TE_DELTA * 2
                     {
-                        self.decode_data = (self.decode_data << 1) | 0;
+                        self.decode_data <<= 1;
                         self.decode_count_bit += 1;
                         self.step = DecoderStep::SaveDuration;
                     } else if duration_diff!(self.te_last, TE_LONG) < TE_DELTA * 2

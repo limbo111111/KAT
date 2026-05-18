@@ -10,10 +10,10 @@
 //! - Preamble: 40+ short/long pairs; then LONG HIGH (sync), SHORT LOW (alignment), then Manchester data
 //! - YEK = bit_reverse_64(key); serial/button/counter from YEK; mixer decryption for counter
 
-use super::{ProtocolDecoder, ProtocolTiming, DecodedSignal};
 use super::keys;
-use crate::radio::demodulator::LevelDuration;
+use super::{DecodedSignal, ProtocolDecoder, ProtocolTiming};
 use crate::duration_diff;
+use crate::radio::demodulator::LevelDuration;
 
 const TE_SHORT: u32 = 400;
 const TE_LONG: u32 = 800;
@@ -85,9 +85,17 @@ impl KiaV5Decoder {
             let mut steps = 8;
             while steps > 0 {
                 let base = if (s3 & 0x40) == 0 {
-                    if (s3 & 0x02) == 0 { 0x74 } else { 0x2E }
+                    if (s3 & 0x02) == 0 {
+                        0x74
+                    } else {
+                        0x2E
+                    }
                 } else {
-                    if (s3 & 0x02) == 0 { 0x3A } else { 0x5C }
+                    if (s3 & 0x02) == 0 {
+                        0x3A
+                    } else {
+                        0x5C
+                    }
                 };
 
                 let mut base = base;
@@ -98,10 +106,10 @@ impl KiaV5Decoder {
                     base = (base & 0x3F) << 2;
                 }
                 if s0 & 0x01 != 0 {
-                    base = base << 1;
+                    base <<= 1;
                 }
 
-                let temp = (s3 ^ s1) & 0xFF;
+                let temp = s3 ^ s1;
                 s3 = (s3 & 0x7F) << 1;
                 if s2 & 0x80 != 0 {
                     s3 |= 0x01;
@@ -116,7 +124,7 @@ impl KiaV5Decoder {
                 }
                 s0 = (s0 & 0x7F) << 1;
 
-                let chk = (base ^ (r ^ temp)) & 0xFF;
+                let chk = base ^ (r ^ temp);
                 if chk & 0x80 != 0 {
                     s0 |= 0x01;
                 }
@@ -125,8 +133,8 @@ impl KiaV5Decoder {
             }
             round_index = (round_index.wrapping_sub(1)) & 0x7;
         }
-        
-        ((s0 as u16) + ((s1 as u16) << 8)) & 0xFFFF
+
+        (s0 as u16) + ((s1 as u16) << 8)
     }
 
     /// YEK: reverse bit order per byte (matches kia_v5.c for key derivation)
@@ -156,17 +164,19 @@ impl KiaV5Decoder {
         };
 
         let (new_state, output) = match (self.manchester_state, event) {
-            (ManchesterState::Mid0, 0) | (ManchesterState::Mid1, 0) => 
-                (ManchesterState::Start0, None),
-            (ManchesterState::Mid0, 1) | (ManchesterState::Mid1, 1) => 
-                (ManchesterState::Start1, None),
-            
+            (ManchesterState::Mid0, 0) | (ManchesterState::Mid1, 0) => {
+                (ManchesterState::Start0, None)
+            }
+            (ManchesterState::Mid0, 1) | (ManchesterState::Mid1, 1) => {
+                (ManchesterState::Start1, None)
+            }
+
             (ManchesterState::Start1, 0) => (ManchesterState::Mid1, Some(true)),
             (ManchesterState::Start1, 2) => (ManchesterState::Start0, Some(true)),
-            
+
             (ManchesterState::Start0, 1) => (ManchesterState::Mid0, Some(false)),
             (ManchesterState::Start0, 3) => (ManchesterState::Start1, Some(false)),
-            
+
             _ => (ManchesterState::Mid1, None),
         };
 
@@ -187,7 +197,7 @@ impl KiaV5Decoder {
         let button = ((yek >> 60) & 0x0F) as u8;
         let encrypted = (yek & 0xFFFFFFFF) as u32;
         let counter = Self::mixer_decode(encrypted);
-        
+
         let _crc = (self.decoded_data & 0x07) as u8;
 
         Some(DecodedSignal {
@@ -266,9 +276,10 @@ impl ProtocolDecoder for KiaV5Decoder {
                         self.step = DecoderStep::Reset;
                     }
                 } else {
-                    if (is_short && duration_diff!(self.te_last, TE_SHORT) < TE_DELTA) ||
-                       (is_long && duration_diff!(self.te_last, TE_SHORT) < TE_DELTA) ||
-                       (duration_diff!(self.te_last, TE_LONG) < TE_DELTA) {
+                    if (is_short && duration_diff!(self.te_last, TE_SHORT) < TE_DELTA)
+                        || (is_long && duration_diff!(self.te_last, TE_SHORT) < TE_DELTA)
+                        || (duration_diff!(self.te_last, TE_LONG) < TE_DELTA)
+                    {
                         self.header_count += 1;
                     } else {
                         self.step = DecoderStep::Reset;

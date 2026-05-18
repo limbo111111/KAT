@@ -53,8 +53,7 @@ impl ScherKhanDecoder {
         let (serial, btn, cnt) = match bit_count {
             51 => {
                 // 51-bit "MAGIC CODE" / Dynamic format: serial(28) | button(4) | counter(16) — matches reference
-                let serial =
-                    ((data >> 24) & 0xFFFFFF0) as u32 | ((data >> 20) & 0x0F) as u32;
+                let serial = ((data >> 24) & 0xFFFFFF0) as u32 | ((data >> 20) & 0x0F) as u32;
                 let btn = ((data >> 24) & 0x0F) as u8;
                 let cnt = (data & 0xFFFF) as u16;
                 (Some(serial), Some(btn), Some(cnt))
@@ -149,8 +148,7 @@ impl ProtocolDecoder for ScherKhanDecoder {
                         // Found stop bit
                         self.step = DecoderStep::Reset;
                         if self.decode_count_bit >= MIN_COUNT_BIT {
-                            let result =
-                                Self::parse_data(self.decode_data, self.decode_count_bit);
+                            let result = Self::parse_data(self.decode_data, self.decode_count_bit);
                             self.decode_data = 0;
                             self.decode_count_bit = 0;
                             return Some(result);
@@ -172,7 +170,7 @@ impl ProtocolDecoder for ScherKhanDecoder {
                         && duration_diff!(duration, TE_SHORT) < TE_DELTA
                     {
                         // Bit 0
-                        self.decode_data = (self.decode_data << 1) | 0;
+                        self.decode_data <<= 1;
                         self.decode_count_bit += 1;
                         self.step = DecoderStep::SaveDuration;
                     } else if duration_diff!(self.te_last, TE_LONG) < TE_DELTA

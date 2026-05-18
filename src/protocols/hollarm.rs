@@ -85,7 +85,7 @@ impl ProtocolDecoder for HollarmDecoder {
                         && duration_diff!(duration, TE_LONG) < TE_DELTA
                     {
                         // Bit 0: short HIGH, long LOW
-                        self.decode_data = (self.decode_data << 1) | 0;
+                        self.decode_data <<= 1;
                         self.decode_count_bit += 1;
                         self.step = DecoderStep::SaveDuration;
                     } else if duration_diff!(self.te_last, TE_SHORT) < TE_DELTA
@@ -97,7 +97,7 @@ impl ProtocolDecoder for HollarmDecoder {
                         self.step = DecoderStep::SaveDuration;
                     } else if duration_diff!(duration, TE_SHORT * 12) < TE_DELTA {
                         // GAP / End of key
-                        self.decode_data = (self.decode_data << 1) | 0;
+                        self.decode_data <<= 1;
                         self.decode_count_bit += 1;
 
                         if self.decode_count_bit == MIN_COUNT_BIT {

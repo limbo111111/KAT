@@ -125,7 +125,7 @@ impl ProtocolDecoder for FiatMarelliDecoder {
         match self.step {
             DecoderStep::Reset => {
                 if level {
-                    if duration_us >= PREAMBLE_PULSE_MIN && duration_us <= PREAMBLE_PULSE_MAX {
+                    if (PREAMBLE_PULSE_MIN..=PREAMBLE_PULSE_MAX).contains(&duration_us) {
                         self.step = DecoderStep::Preamble;
                         self.preamble_count = 1;
                         self.te_sum = duration_us;
@@ -140,7 +140,7 @@ impl ProtocolDecoder for FiatMarelliDecoder {
                 }
             }
             DecoderStep::Preamble => {
-                if duration_us >= PREAMBLE_PULSE_MIN && duration_us <= PREAMBLE_PULSE_MAX {
+                if (PREAMBLE_PULSE_MIN..=PREAMBLE_PULSE_MAX).contains(&duration_us) {
                     self.preamble_count += 1;
                     self.te_sum += duration_us;
                     self.te_count += 1;
@@ -173,7 +173,7 @@ impl ProtocolDecoder for FiatMarelliDecoder {
                 }
             }
             DecoderStep::RetxSync => {
-                if level && duration_us >= RETX_SYNC_MIN && duration_us <= RETX_SYNC_MAX {
+                if level && (RETX_SYNC_MIN..=RETX_SYNC_MAX).contains(&duration_us) {
                     if self.te_detected == 0 {
                         self.te_detected = duration_us / 8;
                         if self.te_detected < 70 { self.te_detected = 100; }
@@ -189,11 +189,11 @@ impl ProtocolDecoder for FiatMarelliDecoder {
                 let mut event = 0xFF;
                 let mut frame_complete = false;
 
-                let diff_short = if duration_us > te_short { duration_us - te_short } else { te_short - duration_us };
+                let diff_short = duration_us.abs_diff(te_short);
                 if diff_short < te_delta {
                     event = if level { 0 } else { 1 }; // ShortLow : ShortHigh
                 } else {
-                    let diff_long = if duration_us > te_long { duration_us - te_long } else { te_long - duration_us };
+                    let diff_long = duration_us.abs_diff(te_long);
                     if diff_long < te_delta {
                         event = if level { 2 } else { 3 }; // LongLow : LongHigh
                     }
@@ -281,7 +281,7 @@ impl ProtocolDecoder for FiatMarelliDecoder {
         let sync_duration = te * 8;
 
         let data_bits = decoded.data_count_bit;
-        if data_bits < MIN_DATA_BITS || data_bits > MAX_DATA_BITS {
+        if !(MIN_DATA_BITS..=MAX_DATA_BITS).contains(&data_bits) {
             return None;
         }
 

@@ -154,11 +154,7 @@ impl ProtocolDecoder for FiatV0Decoder {
     }
 
     fn feed(&mut self, level: bool, duration: u32) -> Option<DecodedSignal> {
-        let diff_short = if duration < TE_SHORT {
-            TE_SHORT - duration
-        } else {
-            duration - TE_SHORT
-        };
+        let diff_short = TE_SHORT.abs_diff(duration);
 
         match self.step {
             DecoderStep::Reset => {
@@ -196,11 +192,7 @@ impl ProtocolDecoder for FiatV0Decoder {
                         self.preamble_count += 1;
                         self.te_last = duration;
                         if self.preamble_count >= PREAMBLE_PAIRS {
-                            let gap_diff = if duration < GAP_THRESHOLD {
-                                GAP_THRESHOLD - duration
-                            } else {
-                                duration - GAP_THRESHOLD
-                            };
+                            let gap_diff = GAP_THRESHOLD.abs_diff(duration);
                             if gap_diff < TE_DELTA {
                                 self.step = DecoderStep::Data;
                                 self.preamble_count = 0;
@@ -215,11 +207,7 @@ impl ProtocolDecoder for FiatV0Decoder {
                     } else {
                         self.step = DecoderStep::Reset;
                         if self.preamble_count >= PREAMBLE_PAIRS {
-                            let gap_diff = if duration < GAP_THRESHOLD {
-                                GAP_THRESHOLD - duration
-                            } else {
-                                duration - GAP_THRESHOLD
-                            };
+                            let gap_diff = GAP_THRESHOLD.abs_diff(duration);
                             if gap_diff < TE_DELTA {
                                 self.step = DecoderStep::Data;
                                 self.preamble_count = 0;

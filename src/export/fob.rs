@@ -409,7 +409,7 @@ pub fn scan_fob_files(dir: &Path) -> Vec<std::path::PathBuf> {
     if let Ok(entries) = std::fs::read_dir(dir) {
         for entry in entries.flatten() {
             let path = entry.path();
-            if path.is_file() && path.extension().map_or(false, |e| e == "fob") {
+            if path.is_file() && path.extension().is_some_and(|e| e == "fob") {
                 files.push(path);
             }
         }

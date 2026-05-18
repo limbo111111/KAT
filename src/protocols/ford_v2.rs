@@ -91,7 +91,7 @@ impl FordV2Decoder {
         let cnt = (((k[7] & 0x7F) as u16) << 9) | ((k[8] as u16) << 1) | ((k[9] as u16) >> 7);
         let tail31 = (((k[9] & 0x7F) as u32) << 24) | ((k[10] as u32) << 16) | ((k[11] as u32) << 8) | (k[12] as u32);
 
-        let mut button_name = None;
+        let button_name;
         match btn {
             0x10 => button_name = Some("Lock"),
             0x11 => button_name = Some("Unlock"),
@@ -177,9 +177,7 @@ impl ProtocolDecoder for FordV2Decoder {
 
             DecoderStep::Preamble => {
                 if is_short {
-                    if self.preamble_count < 0xFFFF {
-                        self.preamble_count += 1;
-                    }
+                    self.preamble_count = self.preamble_count.saturating_add(1);
                 } else if !level && is_long {
                     if self.preamble_count >= PREAMBLE_MIN {
                         self.step = DecoderStep::Sync;
@@ -240,7 +238,7 @@ impl ProtocolDecoder for FordV2Decoder {
                             self.decode_data = (self.decode_data << 1) | (if bit { 1 } else { 0 });
                             self.decode_count_bit += 1;
 
-                            if self.decode_count_bit % 8 == 0 {
+                            if self.decode_count_bit.is_multiple_of(8) {
                                 if self.byte_count < DATA_BYTES {
                                     self.raw_bytes[self.byte_count] = (self.decode_data & 0xFF) as u8;
                                     self.byte_count += 1;

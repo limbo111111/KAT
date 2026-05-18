@@ -154,14 +154,12 @@ impl PsaDecoder {
             let k_idx2 = ((sum >> 11) & 3) as usize;
             let temp = key[k_idx2].wrapping_add(sum);
             sum = sum.wrapping_sub(TEA_DELTA);
-            *v1 = v1.wrapping_sub(
-                temp ^ (v0.wrapping_shr(5) ^ v0.wrapping_shl(4)).wrapping_add(*v0),
-            );
+            *v1 =
+                v1.wrapping_sub(temp ^ (v0.wrapping_shr(5) ^ v0.wrapping_shl(4)).wrapping_add(*v0));
             let k_idx1 = (sum & 3) as usize;
             let temp = key[k_idx1].wrapping_add(sum);
-            *v0 = v0.wrapping_sub(
-                temp ^ (v1.wrapping_shr(5) ^ v1.wrapping_shl(4)).wrapping_add(*v1),
-            );
+            *v0 =
+                v0.wrapping_sub(temp ^ (v1.wrapping_shr(5) ^ v1.wrapping_shl(4)).wrapping_add(*v1));
         }
     }
 
@@ -172,14 +170,12 @@ impl PsaDecoder {
             let k_idx1 = (sum & 3) as usize;
             let temp = key[k_idx1].wrapping_add(sum);
             sum = sum.wrapping_add(TEA_DELTA);
-            *v0 = v0.wrapping_add(
-                temp ^ (v1.wrapping_shr(5) ^ v1.wrapping_shl(4)).wrapping_add(*v1),
-            );
+            *v0 =
+                v0.wrapping_add(temp ^ (v1.wrapping_shr(5) ^ v1.wrapping_shl(4)).wrapping_add(*v1));
             let k_idx2 = ((sum >> 11) & 3) as usize;
             let temp = key[k_idx2].wrapping_add(sum);
-            *v1 = v1.wrapping_add(
-                temp ^ (v0.wrapping_shr(5) ^ v0.wrapping_shl(4)).wrapping_add(*v0),
-            );
+            *v1 =
+                v1.wrapping_add(temp ^ (v0.wrapping_shr(5) ^ v0.wrapping_shl(4)).wrapping_add(*v0));
         }
     }
 
@@ -243,8 +239,12 @@ impl PsaDecoder {
     /// Check if direct XOR is allowed by key2 high byte (matches psa.c)
     fn direct_xor_allowed_by_key2(key2_high_byte: u8) -> bool {
         let lo = key2_high_byte & 0xF;
-        if lo < 3 { return true; }
-        if lo < 7 && (key2_high_byte & 0xC) != 0 { return true; }
+        if lo < 3 {
+            return true;
+        }
+        if lo < 7 && (key2_high_byte & 0xC) != 0 {
+            return true;
+        }
         false
     }
 
@@ -283,9 +283,8 @@ impl PsaDecoder {
                 // Direct XOR decrypt succeeded validation
                 Self::xor_decrypt(&mut buffer);
 
-                let serial = ((buffer[3] as u32) << 8)
-                    | ((buffer[2] as u32) << 16)
-                    | (buffer[4] as u32);
+                let serial =
+                    ((buffer[3] as u32) << 8) | ((buffer[2] as u32) << 16) | (buffer[4] as u32);
                 let counter = (buffer[6] as u32) | ((buffer[5] as u32) << 8);
                 let crc = buffer[7] as u16;
                 let btn = buffer[8] & 0x0F;

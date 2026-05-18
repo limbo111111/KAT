@@ -30,6 +30,7 @@ const STAR_LINE_KEY: u32 = 20; // star_line_mf_key
 const MAX_VAG_KEYS: usize = 4;
 
 /// Global key store - thread-safe access to loaded keys
+#[derive(Default)]
 pub struct KeyStore {
     /// KIA manufacturer key (for KeeLoq-based V3/V4)
     pub kia_mf_key: u64,
@@ -49,20 +50,6 @@ pub struct KeyStore {
     pub vag_keys_loaded: bool,
 }
 
-impl Default for KeyStore {
-    fn default() -> Self {
-        Self {
-            kia_mf_key: 0,
-            kia_v6_a_key: 0,
-            kia_v6_b_key: 0,
-            kia_v5_key: 0,
-            faac_slh_key: 0,
-            star_line_mf_key: 0,
-            vag_keys: Vec::new(),
-            vag_keys_loaded: false,
-        }
-    }
-}
 
 impl KeyStore {
     /// Create a new empty key store

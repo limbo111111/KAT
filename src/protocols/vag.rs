@@ -14,11 +14,10 @@
 //! Type 3/4: 500µs, 45 preamble pairs, sync 1000+500 then 3×750µs; key1/key2 not inverted.
 //! Button names match reference (vag_button_name): Unlock/Lock/Boot.
 
-use super::{ProtocolDecoder, ProtocolTiming, DecodedSignal};
 use super::aut64;
 use super::keys;
+use super::{DecodedSignal, ProtocolDecoder, ProtocolTiming};
 use crate::radio::demodulator::LevelDuration;
-use tracing;
 
 // Type 3/4 timing (used as default for ProtocolTiming)
 const TE_SHORT: u32 = 500;
@@ -35,13 +34,13 @@ const TE_LONG_12: u32 = 600;
 const TE_DELTA_12: u32 = 80; // Preamble1/Data1 (ref vag.c 79/80); preamble now uses REF_PREAMBLE1_TOL
 
 // Reference-aligned deltas (vag.c VAG_NEAR / VAG_TOL_300 79, VAG_TOL_500 120)
-const REF_RESET_DELTA: u32 = 79;       // Reset: 300±79, 500±79 for Preamble2
-const REF_PREAMBLE_SYNC: u32 = 80;     // Preamble2 counting: 500±80
-const REF_SYNC2_AB_DELTA: u32 = 79;    // Sync2A/Sync2B: 500/1000/750±79 (ref VAG_NEAR(..., 79))
-const REF_SYNC2C_DELTA: u32 = 79;      // Sync2C: 750±79
-const REF_GAP1_DELTA: u32 = 79;        // Preamble1→Data1 gap 600µs ±79 (ref check_gap1)
-// Real-world Type 1/2: preamble often ~280–380µs; ref uses 79/80
-const REF_PREAMBLE1_TOL: u32 = 100;    // 300±100 for Type 1/2 preamble lock/count
+const REF_RESET_DELTA: u32 = 79; // Reset: 300±79, 500±79 for Preamble2
+const REF_PREAMBLE_SYNC: u32 = 80; // Preamble2 counting: 500±80
+const REF_SYNC2_AB_DELTA: u32 = 79; // Sync2A/Sync2B: 500/1000/750±79 (ref VAG_NEAR(..., 79))
+const REF_SYNC2C_DELTA: u32 = 79; // Sync2C: 750±79
+const REF_GAP1_DELTA: u32 = 79; // Preamble1→Data1 gap 600µs ±79 (ref check_gap1)
+                                // Real-world Type 1/2: preamble often ~280–380µs; ref uses 79/80
+const REF_PREAMBLE1_TOL: u32 = 100; // 300±100 for Type 1/2 preamble lock/count
 
 // TEA constants
 const TEA_DELTA: u32 = 0x9E3779B9;
@@ -86,10 +85,10 @@ enum DecoderStep {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum VagType {
     Unknown = 0,
-    Type1 = 1,   // AUT64, 300µs
-    Type2 = 2,   // TEA, 300µs
-    Type3 = 3,   // AUT64, 500µs, auto-detect key
-    Type4 = 4,   // AUT64, 500µs, key 2
+    Type1 = 1, // AUT64, 300µs
+    Type2 = 2, // TEA, 300µs
+    Type3 = 3, // AUT64, 500µs, auto-detect key
+    Type4 = 4, // AUT64, 500µs, key 2
 }
 
 /// VAG protocol decoder
@@ -152,7 +151,9 @@ impl VagDecoder {
             }
             ManchesterEvent::ShortHigh => {
                 let (new_state, output) = match self.manchester_state {
-                    ManchesterState::Mid0 | ManchesterState::Mid1 => (ManchesterState::Start1, None),
+                    ManchesterState::Mid0 | ManchesterState::Mid1 => {
+                        (ManchesterState::Start1, None)
+                    }
                     ManchesterState::Start0 => (ManchesterState::Mid0, Some(false)),
                     _ => (ManchesterState::Mid1, None),
                 };
@@ -161,7 +162,9 @@ impl VagDecoder {
             }
             ManchesterEvent::ShortLow => {
                 let (new_state, output) = match self.manchester_state {
-                    ManchesterState::Mid0 | ManchesterState::Mid1 => (ManchesterState::Start0, None),
+                    ManchesterState::Mid0 | ManchesterState::Mid1 => {
+                        (ManchesterState::Start0, None)
+                    }
                     ManchesterState::Start1 => (ManchesterState::Mid1, Some(true)),
                     _ => (ManchesterState::Mid1, None),
                 };
@@ -408,7 +411,6 @@ impl VagDecoder {
                 if Self::try_aut64_decrypt(&mut block_copy, 0) && Self::button_valid(&block_copy) {
                     self.key_idx = 0;
                     self.fill_from_decrypted(&block_copy, dispatch_byte);
-                    return;
                 }
             }
 
@@ -457,10 +459,7 @@ impl VagDecoder {
 
     /// Build encoder output from decoded signal (uses decoded + extra; extra = vag_type | (key_idx<<8))
     fn encode_signal(&self, decoded: &DecodedSignal) -> Option<Vec<LevelDuration>> {
-        let extra = match decoded.extra {
-            Some(e) => e,
-            None => return None,
-        };
+        let extra = decoded.extra?;
         let vag_type_num = (extra & 0xFF) as u8;
         let vag_type = match vag_type_num {
             1 => VagType::Type1,
@@ -520,7 +519,7 @@ impl VagDecoder {
             | ((block[4] as u32) << 16)
             | ((block[5] as u32) << 8)
             | (block[6] as u32);
-        let key2 = (((block[7] as u16) << 8) | (dispatch as u16)) & 0xFFFF;
+        let key2 = ((block[7] as u16) << 8) | (dispatch as u16);
 
         // Preamble: 220 cycles of 300µs HIGH/LOW
         for _ in 0..220 {
@@ -584,8 +583,14 @@ impl VagDecoder {
         Self::tea_encrypt(&mut v0, &mut v1, &TEA_KEY_SCHEDULE);
 
         let enc_block = [
-            (v0 >> 24) as u8, (v0 >> 16) as u8, (v0 >> 8) as u8, v0 as u8,
-            (v1 >> 24) as u8, (v1 >> 16) as u8, (v1 >> 8) as u8, v1 as u8,
+            (v0 >> 24) as u8,
+            (v0 >> 16) as u8,
+            (v0 >> 8) as u8,
+            v0 as u8,
+            (v1 >> 24) as u8,
+            (v1 >> 16) as u8,
+            (v1 >> 8) as u8,
+            v1 as u8,
         ];
 
         let key1_high = ((type_byte as u32) << 24)
@@ -596,7 +601,7 @@ impl VagDecoder {
             | ((enc_block[4] as u32) << 16)
             | ((enc_block[5] as u32) << 8)
             | (enc_block[6] as u32);
-        let key2 = (((enc_block[7] as u16) << 8) | (dispatch as u16)) & 0xFFFF;
+        let key2 = ((enc_block[7] as u16) << 8) | (dispatch as u16);
 
         // Preamble
         for _ in 0..220 {
@@ -626,7 +631,11 @@ impl VagDecoder {
     }
 
     /// Encode Type 3/4 (500µs, AUT64)
-    fn encode_type3_4(decoded: &DecodedSignal, vag_type: VagType, key_idx: u8) -> Option<Vec<LevelDuration>> {
+    fn encode_type3_4(
+        decoded: &DecodedSignal,
+        vag_type: VagType,
+        key_idx: u8,
+    ) -> Option<Vec<LevelDuration>> {
         let mut upload = Vec::with_capacity(600);
         let vag_type_num = vag_type as u8;
 
@@ -649,7 +658,11 @@ impl VagDecoder {
 
         let key_idx = if key_idx != 0xFF {
             key_idx as usize
-        } else if vag_type == VagType::Type4 { 2 } else { 1 };
+        } else if vag_type == VagType::Type4 {
+            2
+        } else {
+            1
+        };
 
         let store = keys::get_keystore();
         if let Some(key) = store.get_vag_key((key_idx + 1) as u8) {
@@ -667,7 +680,7 @@ impl VagDecoder {
             | ((block[4] as u32) << 16)
             | ((block[5] as u32) << 8)
             | (block[6] as u32);
-        let key2 = (((block[7] as u16) << 8) | (dispatch as u16)) & 0xFFFF;
+        let key2 = ((block[7] as u16) << 8) | (dispatch as u16);
 
         let key1 = ((key1_high as u64) << 32) | (key1_low as u64);
 
@@ -791,9 +804,17 @@ impl VagDecoder {
         };
 
         DecodedSignal {
-            serial: if self.decrypted { Some(self.serial) } else { None },
+            serial: if self.decrypted {
+                Some(self.serial)
+            } else {
+                None
+            },
             button: if self.decrypted { Some(self.btn) } else { None },
-            counter: if self.decrypted { Some((self.cnt & 0xFFFF) as u16) } else { None },
+            counter: if self.decrypted {
+                Some((self.cnt & 0xFFFF) as u16)
+            } else {
+                None
+            },
             crc_valid: self.decrypted,
             data: key1,
             data_count_bit: self.data_count_bit,
@@ -874,11 +895,7 @@ impl ProtocolDecoder for VagDecoder {
                     self.manchester_advance(ManchesterEvent::Reset);
                 } else {
                     // (duration - 300) > 79: check 500±79 for Preamble2
-                    let diff = if duration < TE_SHORT {
-                        TE_SHORT - duration
-                    } else {
-                        duration - TE_SHORT
-                    };
+                    let diff = TE_SHORT.abs_diff(duration);
                     if diff <= REF_RESET_DELTA {
                         self.step = DecoderStep::Preamble2;
                         self.data_low = 0;
@@ -898,19 +915,11 @@ impl ProtocolDecoder for VagDecoder {
                     return None;
                 }
 
-                let te_diff = if duration > TE_SHORT_12 {
-                    duration - TE_SHORT_12
-                } else {
-                    TE_SHORT_12 - duration
-                };
+                let te_diff = duration.abs_diff(TE_SHORT_12);
 
                 // Reference: (300-duration) or (duration-300) within tol -> count pair. Use REF_PREAMBLE1_TOL for real-world jitter.
                 if te_diff <= REF_PREAMBLE1_TOL {
-                    let prev_diff = if self.te_last > TE_SHORT_12 {
-                        self.te_last - TE_SHORT_12
-                    } else {
-                        TE_SHORT_12 - self.te_last
-                    };
+                    let prev_diff = self.te_last.abs_diff(TE_SHORT_12);
                     if prev_diff <= REF_PREAMBLE1_TOL {
                         self.te_last = duration;
                         self.header_count += 1;
@@ -923,17 +932,9 @@ impl ProtocolDecoder for VagDecoder {
                 // Duration not near 300: ref checks for 600µs gap (Preamble1->Data1), then reset
                 // ref: set step=Reset; if header_count>=201 then duration=|duration-600|; if duration<=79 and te_last 300±79 -> Data1
                 if self.header_count >= 201 {
-                    let gap_diff = if duration < TE_LONG_12 {
-                        TE_LONG_12 - duration
-                    } else {
-                        duration - TE_LONG_12
-                    };
+                    let gap_diff = TE_LONG_12.abs_diff(duration);
                     if gap_diff <= REF_GAP1_DELTA {
-                        let prev_diff = if self.te_last > TE_SHORT_12 {
-                            self.te_last - TE_SHORT_12
-                        } else {
-                            TE_SHORT_12 - self.te_last
-                        };
+                        let prev_diff = self.te_last.abs_diff(TE_SHORT_12);
                         if prev_diff <= REF_PREAMBLE1_TOL {
                             self.step = DecoderStep::Data1;
                             return None;
@@ -947,22 +948,22 @@ impl ProtocolDecoder for VagDecoder {
             DecoderStep::Data1 => {
                 if self.bit_count < 96 {
                     // Determine Manchester event
-                    let short_diff = if duration > TE_SHORT_12 {
-                        duration - TE_SHORT_12
-                    } else {
-                        TE_SHORT_12 - duration
-                    };
-                    let long_diff = if duration > TE_LONG_12 {
-                        duration - TE_LONG_12
-                    } else {
-                        TE_LONG_12 - duration
-                    };
+                    let short_diff = duration.abs_diff(TE_SHORT_12);
+                    let long_diff = duration.abs_diff(TE_LONG_12);
 
                     // Reference Data1: short 300±79 (221..380), long 600±79 (521..680)
                     let event = if short_diff <= REF_RESET_DELTA {
-                        Some(if level { ManchesterEvent::ShortLow } else { ManchesterEvent::ShortHigh })
+                        Some(if level {
+                            ManchesterEvent::ShortLow
+                        } else {
+                            ManchesterEvent::ShortHigh
+                        })
                     } else if long_diff <= REF_RESET_DELTA {
-                        Some(if level { ManchesterEvent::LongLow } else { ManchesterEvent::LongHigh })
+                        Some(if level {
+                            ManchesterEvent::LongLow
+                        } else {
+                            ManchesterEvent::LongHigh
+                        })
                     } else {
                         None
                     };
@@ -997,11 +998,7 @@ impl ProtocolDecoder for VagDecoder {
 
                 // End-of-data gap: 6000µs, accept within 4000µs (matches vag.c check_gap1_data)
                 if !level {
-                    let gap_diff = if duration > 6000 {
-                        duration - 6000
-                    } else {
-                        6000 - duration
-                    };
+                    let gap_diff = duration.abs_diff(6000);
 
                     if gap_diff < 4000 && self.bit_count == 80 {
                         self.key2_low = (!self.data_low) & 0xFFFF;
@@ -1032,17 +1029,9 @@ impl ProtocolDecoder for VagDecoder {
             DecoderStep::Preamble2 => {
                 // Matches vag.c: LOW 500±80 and te_last 500±80 to count; then header_count>=41, HIGH 1000±79 and te_last 500±79 -> Sync2A
                 if !level {
-                    let diff = if duration < TE_SHORT {
-                        TE_SHORT - duration
-                    } else {
-                        duration - TE_SHORT
-                    };
+                    let diff = TE_SHORT.abs_diff(duration);
                     if diff < REF_PREAMBLE_SYNC {
-                        let prev_diff = if self.te_last < TE_SHORT {
-                            TE_SHORT - self.te_last
-                        } else {
-                            self.te_last - TE_SHORT
-                        };
+                        let prev_diff = TE_SHORT.abs_diff(self.te_last);
                         if prev_diff < REF_PREAMBLE_SYNC {
                             self.te_last = duration;
                             self.header_count += 1;
@@ -1057,19 +1046,11 @@ impl ProtocolDecoder for VagDecoder {
                     return None;
                 }
 
-                let diff = if duration < TE_LONG {
-                    TE_LONG - duration
-                } else {
-                    duration - TE_LONG
-                };
+                let diff = TE_LONG.abs_diff(duration);
                 if diff > REF_RESET_DELTA {
                     return None;
                 }
-                let prev_diff = if self.te_last < TE_SHORT {
-                    TE_SHORT - self.te_last
-                } else {
-                    self.te_last - TE_SHORT
-                };
+                let prev_diff = TE_SHORT.abs_diff(self.te_last);
                 if prev_diff > REF_RESET_DELTA {
                     return None;
                 }
@@ -1080,17 +1061,9 @@ impl ProtocolDecoder for VagDecoder {
             DecoderStep::Sync2A => {
                 // Matches vag.c: LOW 500±79 and te_last 1000±79 -> Sync2B (VAG_NEAR(..., 79))
                 if !level {
-                    let diff = if duration < TE_SHORT {
-                        TE_SHORT - duration
-                    } else {
-                        duration - TE_SHORT
-                    };
+                    let diff = TE_SHORT.abs_diff(duration);
                     if diff <= REF_SYNC2_AB_DELTA {
-                        let prev_diff = if self.te_last < TE_LONG {
-                            TE_LONG - self.te_last
-                        } else {
-                            self.te_last - TE_LONG
-                        };
+                        let prev_diff = TE_LONG.abs_diff(self.te_last);
                         if prev_diff <= REF_SYNC2_AB_DELTA {
                             self.te_last = duration;
                             self.step = DecoderStep::Sync2B;
@@ -1104,11 +1077,7 @@ impl ProtocolDecoder for VagDecoder {
             DecoderStep::Sync2B => {
                 // Matches vag.c: HIGH 750±79 -> Sync2C (VAG_NEAR(duration, 750, 79))
                 if level {
-                    let diff = if duration < 750 {
-                        750 - duration
-                    } else {
-                        duration - 750
-                    };
+                    let diff = duration.abs_diff(750);
                     if diff <= REF_SYNC2_AB_DELTA {
                         self.te_last = duration;
                         self.step = DecoderStep::Sync2C;
@@ -1121,17 +1090,9 @@ impl ProtocolDecoder for VagDecoder {
             DecoderStep::Sync2C => {
                 // Matches vag.c: LOW 750±79 and te_last 750±79 (diff<=79), mid_count++; at 3 -> Data2
                 if !level {
-                    let diff = if duration < 750 {
-                        750 - duration
-                    } else {
-                        duration - 750
-                    };
+                    let diff = duration.abs_diff(750);
                     if diff <= REF_SYNC2C_DELTA {
-                        let prev_diff = if self.te_last < 750 {
-                            750 - self.te_last
-                        } else {
-                            self.te_last - 750
-                        };
+                        let prev_diff = self.te_last.abs_diff(750);
                         if prev_diff <= REF_SYNC2C_DELTA {
                             self.mid_count += 1;
                             self.step = DecoderStep::Sync2B;
@@ -1152,10 +1113,18 @@ impl ProtocolDecoder for VagDecoder {
 
             DecoderStep::Data2 => {
                 // Matches vag.c: short 380-620µs, long 880-1120µs
-                let event = if duration >= 380 && duration <= 620 {
-                    Some(if level { ManchesterEvent::ShortLow } else { ManchesterEvent::ShortHigh })
-                } else if duration >= 880 && duration <= 1120 {
-                    Some(if level { ManchesterEvent::LongLow } else { ManchesterEvent::LongHigh })
+                let event = if (380..=620).contains(&duration) {
+                    Some(if level {
+                        ManchesterEvent::ShortLow
+                    } else {
+                        ManchesterEvent::ShortHigh
+                    })
+                } else if (880..=1120).contains(&duration) {
+                    Some(if level {
+                        ManchesterEvent::LongLow
+                    } else {
+                        ManchesterEvent::LongHigh
+                    })
                 } else {
                     None
                 };

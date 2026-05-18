@@ -151,8 +151,8 @@ impl ProtocolDecoder for MastercodeDecoder {
             // In Flipper ARF:
             // instance->serial = (instance->data >> 4) & 0xFFFF;
             // instance->btn = (instance->data >> 2 & 0x03);
-            let reconstructed = ((serial as u64) << 4) | ((button as u64 & 0x03) << 2) | base;
-            reconstructed
+
+            ((serial as u64) << 4) | ((button as u64 & 0x03) << 2) | base
         } else {
             decoded.data
         };

@@ -133,7 +133,9 @@ impl ProtocolDecoder for PorscheCayenneDecoder {
                 if level {
                     if duration_diff!(duration, PC_TE_SYNC) < TE_DELTA {
                         // wait for LOW
-                    } else if self.sync_count >= PC_SYNC_MIN && duration_diff!(duration, PC_TE_GAP) < TE_DELTA {
+                    } else if self.sync_count >= PC_SYNC_MIN
+                        && duration_diff!(duration, PC_TE_GAP) < TE_DELTA
+                    {
                         self.step = DecoderStep::GapLow;
                     } else {
                         self.step = DecoderStep::Reset;
@@ -142,7 +144,9 @@ impl ProtocolDecoder for PorscheCayenneDecoder {
                 } else {
                     if duration_diff!(duration, PC_TE_SYNC) < TE_DELTA {
                         self.sync_count += 1;
-                    } else if self.sync_count >= PC_SYNC_MIN && duration_diff!(duration, PC_TE_GAP) < TE_DELTA {
+                    } else if self.sync_count >= PC_SYNC_MIN
+                        && duration_diff!(duration, PC_TE_GAP) < TE_DELTA
+                    {
                         self.step = DecoderStep::GapHigh;
                     } else {
                         self.step = DecoderStep::Reset;
@@ -198,14 +202,21 @@ impl ProtocolDecoder for PorscheCayenneDecoder {
                             raw >>= 8;
                         }
 
-                        let serial = ((pkt[1] as u32) << 16) | ((pkt[2] as u32) << 8) | (pkt[3] as u32);
+                        let serial =
+                            ((pkt[1] as u32) << 16) | ((pkt[2] as u32) << 8) | (pkt[3] as u32);
                         let btn = pkt[0] >> 4;
 
                         let mut found_cnt = 0;
                         let mut try_pkt = [0u8; 8];
                         for try_cnt in 1..=256 {
                             let ft = pkt[0] & 0x07;
-                            Self::compute_frame(serial, btn, (try_cnt - 1) as u16, ft, &mut try_pkt);
+                            Self::compute_frame(
+                                serial,
+                                btn,
+                                (try_cnt - 1) as u16,
+                                ft,
+                                &mut try_pkt,
+                            );
                             if try_pkt[4..=7] == pkt[4..=7] {
                                 found_cnt = try_cnt as u16;
                                 break;
@@ -249,7 +260,13 @@ impl ProtocolDecoder for PorscheCayenneDecoder {
 
         for f in 0..4 {
             let mut pkt = [0u8; 8];
-            Self::compute_frame(serial, button, cnt.wrapping_add(f as u16), frame_types[f], &mut pkt);
+            Self::compute_frame(
+                serial,
+                button,
+                cnt.wrapping_add(f as u16),
+                frame_types[f],
+                &mut pkt,
+            );
 
             // Preamble
             for _ in 0..PC_SYNC_COUNT {

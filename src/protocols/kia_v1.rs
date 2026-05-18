@@ -187,15 +187,14 @@ impl ProtocolDecoder for KiaV1Decoder {
                     }
                 }
                 
-                if self.header_count > 70 {
-                    if !level && is_short && duration_diff!(self.te_last, TE_LONG) < TE_DELTA {
+                if self.header_count > 70
+                    && !level && is_short && duration_diff!(self.te_last, TE_LONG) < TE_DELTA {
                         // C: decode_count_bit=1, then add_bit(1) increments to 2
                         self.decode_count_bit = 2;
                         self.decode_data = 1;
                         self.header_count = 0;
                         self.step = DecoderStep::DecodeData;
                     }
-                }
             }
 
             DecoderStep::DecodeData => {

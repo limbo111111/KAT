@@ -10,7 +10,7 @@
 //! (as stored, and byte-swapped) in case the source used big- or little-endian.
 
 use super::common::DecodedSignal;
-use super::keeloq_common::{keeloq_decrypt, keeloq_normal_learning, reverse_key, reverse8};
+use super::keeloq_common::{keeloq_decrypt, keeloq_normal_learning, reverse8, reverse_key};
 use super::kia_v3_v4;
 use super::star_line;
 use crate::keystore;
@@ -23,10 +23,7 @@ const STAR_LINE_BITS: usize = 64;
 /// Tries both Kia V3/V4 format (68-bit, 400/800µs) and Star Line format (64-bit, 250/500µs)
 /// regardless of frequency; each key is tried in both byte orders (LE and BE) until one validates.
 /// Returns `("Keeloq (keystore name)", decoded)` on first successful decrypt.
-pub fn try_decode(
-    pairs: &[LevelDuration],
-    _frequency: u32,
-) -> Option<(String, DecodedSignal)> {
+pub fn try_decode(pairs: &[LevelDuration], _frequency: u32) -> Option<(String, DecodedSignal)> {
     let keys = keystore::keeloq_mf_keys_with_names();
     if keys.is_empty() {
         return None;
@@ -116,10 +113,7 @@ fn try_kia_v3_v4_format(
 
 /// Try Star Line 64-bit format with each key. Uses [keeloq_common::keeloq_decrypt] and
 /// [keeloq_common::keeloq_normal_learning] for validation.
-fn try_star_line_format(
-    data: u64,
-    keys: &[(String, u64)],
-) -> Option<(String, DecodedSignal)> {
+fn try_star_line_format(data: u64, keys: &[(String, u64)]) -> Option<(String, DecodedSignal)> {
     let reversed = reverse_key(data, STAR_LINE_BITS);
     let key_fix = (reversed >> 32) as u32;
     let key_hop = (reversed & 0xFFFFFFFF) as u32;

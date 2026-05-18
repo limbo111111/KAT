@@ -101,10 +101,18 @@ impl SantaFeDecoder {
         let button = self.data[8];
 
         let mut button_name = None;
-        if button == 0x01 { button_name = Some("Lock".to_string()); }
-        if button == 0x02 { button_name = Some("Unlock".to_string()); }
-        if button == 0x04 { button_name = Some("Trunk".to_string()); }
-        if button == 0x08 { button_name = Some("Panic".to_string()); }
+        if button == 0x01 {
+            button_name = Some("Lock".to_string());
+        }
+        if button == 0x02 {
+            button_name = Some("Unlock".to_string());
+        }
+        if button == 0x04 {
+            button_name = Some("Trunk".to_string());
+        }
+        if button == 0x08 {
+            button_name = Some("Panic".to_string());
+        }
 
         let mut packed: u64 = 0;
         for i in 0..8 {
@@ -212,7 +220,9 @@ impl ProtocolDecoder for SantaFeDecoder {
 
             DecoderStep::CheckDuration => {
                 if !level {
-                    if duration_diff!(duration, TE_SHORT) < TE_DELTA || duration_diff!(duration, TE_LONG) < TE_DELTA {
+                    if duration_diff!(duration, TE_SHORT) < TE_DELTA
+                        || duration_diff!(duration, TE_LONG) < TE_DELTA
+                    {
                         if self.bit_count >= 80 {
                             let res = self.process_data();
                             self.step = DecoderStep::Reset;

@@ -9,11 +9,11 @@
 //! - Short preamble of 16 pairs; sync 1200µs (V4: long HIGH, V3: long LOW)
 //! - KeeLoq encryption (KIA manufacturer key); V3/V4 differ only in sync polarity
 
-use super::{ProtocolDecoder, ProtocolTiming, DecodedSignal};
 use super::keeloq_common::{keeloq_decrypt, keeloq_encrypt};
 use super::keys;
-use crate::radio::demodulator::LevelDuration;
+use super::{DecodedSignal, ProtocolDecoder, ProtocolTiming};
 use crate::duration_diff;
+use crate::radio::demodulator::LevelDuration;
 
 const TE_SHORT: u32 = 400;
 const TE_LONG: u32 = 800;
@@ -100,7 +100,7 @@ impl KiaV3V4Decoder {
         let mut b = self.raw_bits;
         // V3 sync means data is inverted
         if self.is_v3_sync {
-            let num_bytes = ((self.raw_bit_count + 7) / 8) as usize;
+            let num_bytes = self.raw_bit_count.div_ceil(8) as usize;
             for i in 0..num_bytes {
                 b[i] = !b[i];
             }
@@ -108,15 +108,15 @@ impl KiaV3V4Decoder {
 
         let _crc = (b[8] >> 4) & 0x0F;
 
-        let encrypted = ((Self::reverse8(b[3]) as u32) << 24) |
-                       ((Self::reverse8(b[2]) as u32) << 16) |
-                       ((Self::reverse8(b[1]) as u32) << 8) |
-                       (Self::reverse8(b[0]) as u32);
+        let encrypted = ((Self::reverse8(b[3]) as u32) << 24)
+            | ((Self::reverse8(b[2]) as u32) << 16)
+            | ((Self::reverse8(b[1]) as u32) << 8)
+            | (Self::reverse8(b[0]) as u32);
 
-        let serial = ((Self::reverse8(b[7] & 0xF0) as u32) << 24) |
-                    ((Self::reverse8(b[6]) as u32) << 16) |
-                    ((Self::reverse8(b[5]) as u32) << 8) |
-                    (Self::reverse8(b[4]) as u32);
+        let serial = ((Self::reverse8(b[7] & 0xF0) as u32) << 24)
+            | ((Self::reverse8(b[6]) as u32) << 16)
+            | ((Self::reverse8(b[5]) as u32) << 8)
+            | (Self::reverse8(b[4]) as u32);
 
         let button = (Self::reverse8(b[7]) & 0xF0) >> 4;
         let our_serial_lsb = (serial & 0xFF) as u8;
@@ -137,14 +137,14 @@ impl KiaV3V4Decoder {
         let counter = (decrypted & 0xFFFF) as u16;
 
         // Build key data
-        let key_data = ((b[0] as u64) << 56) |
-                      ((b[1] as u64) << 48) |
-                      ((b[2] as u64) << 40) |
-                      ((b[3] as u64) << 32) |
-                      ((b[4] as u64) << 24) |
-                      ((b[5] as u64) << 16) |
-                      ((b[6] as u64) << 8) |
-                      (b[7] as u64);
+        let key_data = ((b[0] as u64) << 56)
+            | ((b[1] as u64) << 48)
+            | ((b[2] as u64) << 40)
+            | ((b[3] as u64) << 32)
+            | ((b[4] as u64) << 24)
+            | ((b[5] as u64) << 16)
+            | ((b[6] as u64) << 8)
+            | (b[7] as u64);
 
         Some(DecodedSignal {
             serial: Some(serial),
@@ -174,7 +174,11 @@ pub fn collect_kia_v3_v4_bits(
     let mut is_v3_sync = false;
 
     for pair in pairs {
-        let level = if invert_level { !pair.level } else { pair.level };
+        let level = if invert_level {
+            !pair.level
+        } else {
+            pair.level
+        };
         let duration = pair.duration_us;
         let is_short = duration_diff!(duration, TE_SHORT) < TE_DELTA;
         let is_long = duration_diff!(duration, TE_LONG) < TE_DELTA;
@@ -363,23 +367,23 @@ impl ProtocolDecoder for KiaV3V4Decoder {
         let counter = decoded.counter.unwrap_or(0);
 
         // Build plaintext for encryption
-        let plaintext = (counter as u32) |
-                       ((serial & 0xFF) << 16) |
-                       (0x1 << 24) |
-                       (((button & 0x0F) as u32) << 28);
+        let plaintext = (counter as u32)
+            | ((serial & 0xFF) << 16)
+            | (0x1 << 24)
+            | (((button & 0x0F) as u32) << 28);
 
         let mf_key = Self::get_mf_key();
         let encrypted = keeloq_encrypt(plaintext, mf_key);
 
         // Build raw bytes
         let mut raw_bytes = [0u8; 9];
-        raw_bytes[0] = Self::reverse8((encrypted >> 0) as u8);
+        raw_bytes[0] = Self::reverse8(encrypted as u8);
         raw_bytes[1] = Self::reverse8((encrypted >> 8) as u8);
         raw_bytes[2] = Self::reverse8((encrypted >> 16) as u8);
         raw_bytes[3] = Self::reverse8((encrypted >> 24) as u8);
 
         let serial_btn = (serial & 0x0FFFFFFF) | (((button & 0x0F) as u32) << 28);
-        raw_bytes[4] = Self::reverse8((serial_btn >> 0) as u8);
+        raw_bytes[4] = Self::reverse8(serial_btn as u8);
         raw_bytes[5] = Self::reverse8((serial_btn >> 8) as u8);
         raw_bytes[6] = Self::reverse8((serial_btn >> 16) as u8);
         raw_bytes[7] = Self::reverse8((serial_btn >> 24) as u8);

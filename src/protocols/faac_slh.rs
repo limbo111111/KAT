@@ -101,7 +101,7 @@ impl ProtocolDecoder for FaacSlhDecoder {
 
                             let mut is_prog_mode = false;
                             let mut seed = 0u32;
-                            let mut cnt = 0u16;
+                            let cnt;
 
                             if data_prg[7] == 0x52 && data_prg[6] == 0x0F && data_prg[0] == 0x00 {
                                 is_prog_mode = true;
@@ -192,7 +192,7 @@ impl ProtocolDecoder for FaacSlhDecoder {
         upload.push(LevelDuration::new(true, TE_LONG * 2));
         upload.push(LevelDuration::new(false, TE_LONG * 2));
 
-        let mut encode_data = decoded.data;
+        let encode_data = decoded.data;
 
         // In real FAAC SLH we would regenerate the Keeloq part if we know the seed and manufacture key
         // For simple replay without rolling, we just replay the data

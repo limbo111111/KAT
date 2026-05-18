@@ -166,12 +166,14 @@ impl ProtocolDecoder for SecPlusV1Decoder {
                 if level {
                     if duration_diff!(duration, TE_SHORT) < TE_DELTA {
                         self.base_packet_index = SECPLUS_V1_PACKET_1_INDEX_BASE;
-                        self.data_array[self.decode_count_bit + self.base_packet_index] = SECPLUS_V1_BIT_0;
+                        self.data_array[self.decode_count_bit + self.base_packet_index] =
+                            SECPLUS_V1_BIT_0;
                         self.decode_count_bit += 1;
                         self.step = DecoderStep::SaveDuration;
                     } else if duration_diff!(duration, TE_LONG) < TE_DELTA {
                         self.base_packet_index = SECPLUS_V1_PACKET_2_INDEX_BASE;
-                        self.data_array[self.decode_count_bit + self.base_packet_index] = SECPLUS_V1_BIT_2;
+                        self.data_array[self.decode_count_bit + self.base_packet_index] =
+                            SECPLUS_V1_BIT_2;
                         self.decode_count_bit += 1;
                         self.step = DecoderStep::SaveDuration;
                     } else {
@@ -192,7 +194,9 @@ impl ProtocolDecoder for SecPlusV1Decoder {
                                 self.packet_accepted |= SECPLUS_V1_PACKET_2_ACCEPTED;
                             }
 
-                            if self.packet_accepted == (SECPLUS_V1_PACKET_1_ACCEPTED | SECPLUS_V1_PACKET_2_ACCEPTED) {
+                            if self.packet_accepted
+                                == (SECPLUS_V1_PACKET_1_ACCEPTED | SECPLUS_V1_PACKET_2_ACCEPTED)
+                            {
                                 let sig = self.decode_packets();
                                 self.step = DecoderStep::Reset;
                                 return Some(sig);
@@ -214,19 +218,22 @@ impl ProtocolDecoder for SecPlusV1Decoder {
                     if duration_diff!(self.te_last, TE_SHORT * 3) < TE_DELTA * 3
                         && duration_diff!(duration, TE_SHORT) < TE_DELTA
                     {
-                        self.data_array[self.decode_count_bit + self.base_packet_index] = SECPLUS_V1_BIT_0;
+                        self.data_array[self.decode_count_bit + self.base_packet_index] =
+                            SECPLUS_V1_BIT_0;
                         self.decode_count_bit += 1;
                         self.step = DecoderStep::SaveDuration;
                     } else if duration_diff!(self.te_last, TE_SHORT * 2) < TE_DELTA * 2
                         && duration_diff!(duration, TE_SHORT * 2) < TE_DELTA * 2
                     {
-                        self.data_array[self.decode_count_bit + self.base_packet_index] = SECPLUS_V1_BIT_1;
+                        self.data_array[self.decode_count_bit + self.base_packet_index] =
+                            SECPLUS_V1_BIT_1;
                         self.decode_count_bit += 1;
                         self.step = DecoderStep::SaveDuration;
                     } else if duration_diff!(self.te_last, TE_SHORT) < TE_DELTA
                         && duration_diff!(duration, TE_SHORT * 3) < TE_DELTA * 3
                     {
-                        self.data_array[self.decode_count_bit + self.base_packet_index] = SECPLUS_V1_BIT_2;
+                        self.data_array[self.decode_count_bit + self.base_packet_index] =
+                            SECPLUS_V1_BIT_2;
                         self.decode_count_bit += 1;
                         self.step = DecoderStep::SaveDuration;
                     } else {

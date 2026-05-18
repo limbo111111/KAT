@@ -323,7 +323,7 @@ impl ProtocolDecoder for FordV1Decoder {
                                 self.decode_data = (self.decode_data << 1) | (if bit { 1 } else { 0 });
                                 self.decode_count_bit += 1;
 
-                                if self.decode_count_bit % 8 == 0 {
+                                if self.decode_count_bit.is_multiple_of(8) {
                                     if self.byte_count < DATA_BYTES {
                                         self.raw_bytes[self.byte_count] = (self.decode_data & 0xFF) as u8;
                                         self.byte_count += 1;
@@ -355,7 +355,7 @@ impl ProtocolDecoder for FordV1Decoder {
                         self.decode_data = (self.decode_data << 1) | (if bit { 1 } else { 0 });
                         self.decode_count_bit += 1;
 
-                        if self.decode_count_bit % 8 == 0 {
+                        if self.decode_count_bit.is_multiple_of(8) {
                             if self.byte_count < DATA_BYTES {
                                 self.raw_bytes[self.byte_count] = (self.decode_data & 0xFF) as u8;
                                 self.byte_count += 1;
@@ -370,14 +370,13 @@ impl ProtocolDecoder for FordV1Decoder {
                         }
                     }
                 } else {
-                    if duration >= TE_LONG * 3 {
-                        if self.byte_count == 16 {
+                    if duration >= TE_LONG * 3
+                        && self.byte_count == 16 {
                             // Try last byte variants if short
                             let res = self.try_last_byte_variants();
                             self.reset();
                             return res;
                         }
-                    }
                     self.reset();
                 }
             }

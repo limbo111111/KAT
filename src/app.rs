@@ -422,7 +422,7 @@ impl App {
             }
         };
 
-        let device_detected = radio.as_ref().map_or(false, |r| r.is_available());
+        let device_detected = radio.as_ref().is_some_and(|r| r.is_available());
 
         let radio_state = if device_detected {
             RadioState::Idle
@@ -522,7 +522,7 @@ impl App {
     /// True if the active device supports transmit (HackRF only; RTL-SDR is receive-only).
     #[allow(dead_code)]
     pub fn can_transmit(&self) -> bool {
-        self.radio.as_ref().map_or(false, |r| r.supports_tx())
+        self.radio.as_ref().is_some_and(|r| r.supports_tx())
     }
 
     /// Select the next capture in the list
@@ -625,7 +625,7 @@ impl App {
 
     /// Execute a command
     pub fn execute_command(&mut self, command: &str) -> Result<()> {
-        let parts: Vec<&str> = command.trim().split_whitespace().collect();
+        let parts: Vec<&str> = command.split_whitespace().collect();
         if parts.is_empty() {
             return Ok(());
         }
@@ -745,7 +745,7 @@ impl App {
     /// Set the receive frequency
     fn set_frequency(&mut self, hz: u32) -> Result<()> {
         // Validate frequency range (common keyfob frequencies)
-        if hz < 300_000_000 || hz > 928_000_000 {
+        if !(300_000_000..=928_000_000).contains(&hz) {
             self.last_error = Some("Frequency must be between 300-928 MHz".to_string());
             return Ok(());
         }
@@ -1198,14 +1198,14 @@ impl App {
     /// the selected capture is encoder-capable and not a barrier/gate/garage or alarm (KeeLoq barrier
     /// and alarm protocols get Replay + export + delete only). Without TX (e.g. RTL-SDR): only export and delete.
     pub fn available_signal_actions(&self) -> Vec<SignalAction> {
-        let has_tx = self.radio.as_ref().map_or(false, |r| r.supports_tx());
+        let has_tx = self.radio.as_ref().is_some_and(|r| r.supports_tx());
         let selected = self
             .selected_capture
             .and_then(|idx| self.captures.get(idx));
         let encoder_capable = selected
-            .map_or(false, |c| c.status == crate::capture::CaptureStatus::EncoderCapable);
+            .is_some_and(|c| c.status == crate::capture::CaptureStatus::EncoderCapable);
         let is_non_car_keeloq = selected
-            .map_or(false, |c| is_keeloq_non_car(c.protocol_name()));
+            .is_some_and(|c| is_keeloq_non_car(c.protocol_name()));
 
         if !has_tx {
             return SignalAction::ALL
@@ -1365,7 +1365,7 @@ impl App {
         // Pre-fill filename: Year_Make_Model_Region_Command_8HEX for all .fob exports
         let capture = self.captures.iter().find(|c| c.id == id);
         let default_name = capture
-            .map(|c| Self::default_export_filename(c))
+            .map(Self::default_export_filename)
             .unwrap_or_else(|| format!("capture_{}", id));
         let suffix_nanos = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -1376,7 +1376,7 @@ impl App {
 
         // Pre-fill metadata from capture if set, otherwise make from protocol
         let make = capture
-            .and_then(|c| c.make.as_ref().map(String::clone))
+            .and_then(|c| c.make.clone())
             .filter(|s| !s.is_empty())
             .unwrap_or_else(|| {
                 capture
@@ -1386,17 +1386,14 @@ impl App {
         self.export_capture_id = Some(id);
         self.export_format = Some(ExportFormat::Fob);
         self.fob_meta_year = capture
-            .and_then(|c| c.year.as_ref())
-            .map(String::clone)
+            .and_then(|c| c.year.as_ref()).cloned()
             .unwrap_or_default();
         self.fob_meta_make = make;
         self.fob_meta_model = capture
-            .and_then(|c| c.model.as_ref())
-            .map(String::clone)
+            .and_then(|c| c.model.as_ref()).cloned()
             .unwrap_or_default();
         self.fob_meta_region = capture
-            .and_then(|c| c.region.as_ref())
-            .map(String::clone)
+            .and_then(|c| c.region.as_ref()).cloned()
             .unwrap_or_default();
         self.fob_meta_command = capture
             .and_then(|c| c.command.clone())
@@ -1649,7 +1646,7 @@ impl App {
         let research_mode = self.storage.config.research_mode;
 
         for path in &files {
-            let is_sub = path.extension().map_or(false, |e| e == "sub");
+            let is_sub = path.extension().is_some_and(|e| e == "sub");
 
             if is_sub {
                 match crate::export::flipper::import_sub_raw(path) {
@@ -1701,15 +1698,14 @@ impl App {
                             } else {
                                 crate::capture::CaptureStatus::Decoded
                             };
-                            if research_mode || capture.protocol.is_some() {
-                                if !self.capture_duplicate_of_existing(&capture) {
+                            if (research_mode || capture.protocol.is_some())
+                                && !self.capture_duplicate_of_existing(&capture) {
                                     self.next_capture_id += 1;
                                     capture.source_file = Some(Self::path_relative_to_import(path, self.storage.import_dir()));
                                     self.captures.push(capture);
                                     imported += 1;
                                     any_decoded_added = true;
                                 }
-                            }
                         }
                         // When no protocol decoded the stream, add a single Unknown capture if research_mode (same as live capture).
                         if !any_decoded_added && research_mode && !raw_pairs.is_empty() {
@@ -1791,7 +1787,7 @@ impl App {
         }
 
         let default_name = self.captures.iter().find(|c| c.id == id)
-            .map(|c| Self::default_export_filename(c))
+            .map(Self::default_export_filename)
             .unwrap_or_else(|| format!("capture_{}", id));
 
         self.export_capture_id = Some(id);
