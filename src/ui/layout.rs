@@ -264,10 +264,21 @@ fn render_help_bar(frame: &mut Frame, area: Rect, app: &App) {
         InputMode::LoadFileBrowser => "Up/Down: Navigate | Enter: Open/Import | Esc: Close",
     };
 
-    let help = Paragraph::new(Line::from(Span::styled(
-        format!(" {}", help_text),
-        Style::default().fg(Color::DarkGray),
-    )));
+    let mut spans = vec![Span::raw(" ")];
+    for (i, part) in help_text.split(" | ").enumerate() {
+        if i > 0 {
+            spans.push(Span::styled(" | ", Style::default().fg(Color::DarkGray)));
+        }
+        if let Some((key, action)) = part.split_once(": ") {
+            spans.push(Span::styled(key, Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)));
+            spans.push(Span::styled(": ", Style::default().fg(Color::DarkGray)));
+            spans.push(Span::styled(action, Style::default().fg(Color::DarkGray)));
+        } else {
+            spans.push(Span::styled(part, Style::default().fg(Color::DarkGray)));
+        }
+    }
+
+    let help = Paragraph::new(Line::from(spans));
 
     frame.render_widget(help, area);
 }
