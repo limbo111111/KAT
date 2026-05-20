@@ -32,10 +32,10 @@ pub fn draw_ui(frame: &mut Frame, app: &App) {
     // Full-width rows: header, settings (optional), then middle row split into [captures | RX bar], status, command (optional), help
     let main_area = frame.area();
     let mut v_constraints = vec![
-        Constraint::Length(3),  // Header (full width)
-        Constraint::Min(26),    // Middle: captures table + detail panel (signal + vulnerability)
-        Constraint::Length(3),  // Status bar (full width)
-        Constraint::Length(1),  // Help bar (full width)
+        Constraint::Length(3), // Header (full width)
+        Constraint::Min(26),   // Middle: captures table + detail panel (signal + vulnerability)
+        Constraint::Length(3), // Status bar (full width)
+        Constraint::Length(1), // Help bar (full width)
     ];
     if show_settings {
         v_constraints.insert(1, Constraint::Length(3)); // Settings tabs (full width)
@@ -144,14 +144,26 @@ pub fn draw_ui(frame: &mut Frame, app: &App) {
 fn render_rssi_bar(frame: &mut Frame, area: Rect, app: &App) {
     let is_tx = app.radio_state == RadioState::Transmitting;
     let (title, filled_style, empty_style) = if is_tx {
-        (" TX ", Style::default().fg(Color::Red), Style::default().fg(Color::DarkGray))
+        (
+            " TX ",
+            Style::default().fg(Color::Red),
+            Style::default().fg(Color::DarkGray),
+        )
     } else {
-        (" RX ", Style::default().fg(Color::Green), Style::default().fg(Color::DarkGray))
+        (
+            " RX ",
+            Style::default().fg(Color::Green),
+            Style::default().fg(Color::DarkGray),
+        )
     };
 
     let block = Block::default()
         .borders(Borders::ALL)
-        .border_style(if is_tx { Style::default().fg(Color::Red) } else { Style::default() })
+        .border_style(if is_tx {
+            Style::default().fg(Color::Red)
+        } else {
+            Style::default()
+        })
         .title(title);
     let inner = block.inner(area);
     frame.render_widget(block, area);
@@ -196,9 +208,7 @@ fn render_header(frame: &mut Frame, area: Rect, app: &App) {
 
     // Build radio info string: device name (if any), state, freq, gains
     let amp_str = if app.amp_enabled { "ON" } else { "OFF" };
-    let device_str = app
-        .radio_device_name()
-        .unwrap_or("No device");
+    let device_str = app.radio_device_name().unwrap_or("No device");
     let radio_info = format!(
         "{} {} | {} | {:.2} MHz | LNA:{} VGA:{} AMP:{}",
         status_symbol,
@@ -242,13 +252,11 @@ fn render_help_bar(frame: &mut Frame, area: Rect, app: &App) {
         InputMode::SettingsEdit => "Up/Down: Change Value | Enter: Apply | Esc: Cancel",
         InputMode::HackRfNotDetected => "Press any key to continue",
         InputMode::StartupImport => "y: Import | n: Skip",
-        InputMode::ExportFilename => {
-            match app.export_format {
-                Some(crate::app::ExportFormat::Fob) => "Enter: Next Field | Esc: Cancel Export",
-                Some(crate::app::ExportFormat::Flipper) => "Enter: Save & Export | Esc: Cancel Export",
-                None => "Enter: Confirm | Esc: Cancel",
-            }
-        }
+        InputMode::ExportFilename => match app.export_format {
+            Some(crate::app::ExportFormat::Fob) => "Enter: Next Field | Esc: Cancel Export",
+            Some(crate::app::ExportFormat::Flipper) => "Enter: Save & Export | Esc: Cancel Export",
+            None => "Enter: Confirm | Esc: Cancel",
+        },
         InputMode::FobMetaYear
         | InputMode::FobMetaMake
         | InputMode::FobMetaModel
@@ -270,7 +278,12 @@ fn render_help_bar(frame: &mut Frame, area: Rect, app: &App) {
             spans.push(Span::styled(" | ", Style::default().fg(Color::DarkGray)));
         }
         if let Some((key, action)) = part.split_once(": ") {
-            spans.push(Span::styled(key, Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)));
+            spans.push(Span::styled(
+                key,
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            ));
             spans.push(Span::styled(": ", Style::default().fg(Color::DarkGray)));
             spans.push(Span::styled(action, Style::default().fg(Color::DarkGray)));
         } else {
@@ -303,7 +316,10 @@ fn render_load_file_browser(frame: &mut Frame, app: &App) {
 
     let path_str = app.load_browser_cwd.to_string_lossy();
     let path_display = if path_str.len() > popup_width as usize - 4 {
-        format!("..{}", &path_str[path_str.len().saturating_sub(popup_width as usize - 5)..])
+        format!(
+            "..{}",
+            &path_str[path_str.len().saturating_sub(popup_width as usize - 5)..]
+        )
     } else {
         path_str.to_string()
     };
@@ -317,7 +333,9 @@ fn render_load_file_browser(frame: &mut Frame, app: &App) {
 
     let entries = &app.load_browser_entries;
     let scroll = app.load_browser_scroll;
-    let selected = app.load_browser_selected.min(entries.len().saturating_sub(1));
+    let selected = app
+        .load_browser_selected
+        .min(entries.len().saturating_sub(1));
     let end = (scroll + LOAD_BROWSER_VISIBLE_ROWS).min(entries.len());
 
     for (i, (name, _path, is_dir)) in entries[scroll..end].iter().enumerate() {
@@ -327,7 +345,10 @@ fn render_load_file_browser(frame: &mut Frame, app: &App) {
         let (style, suffix) = if *is_dir {
             (
                 if is_selected {
-                    Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD)
+                    Style::default()
+                        .fg(Color::Black)
+                        .bg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD)
                 } else {
                     Style::default().fg(Color::Cyan)
                 },
@@ -336,7 +357,10 @@ fn render_load_file_browser(frame: &mut Frame, app: &App) {
         } else {
             (
                 if is_selected {
-                    Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD)
+                    Style::default()
+                        .fg(Color::Black)
+                        .bg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD)
                 } else {
                     Style::default().fg(Color::White)
                 },
@@ -464,7 +488,7 @@ fn render_export_form(frame: &mut Frame, app: &App) {
     let dim_style = Style::default().fg(Color::DarkGray);
     let accent_style = Style::default().fg(Color::Yellow);
     let cursor = Span::styled(
-        "_",
+        "█",
         Style::default()
             .fg(Color::Cyan)
             .add_modifier(Modifier::SLOW_BLINK),
@@ -546,14 +570,12 @@ fn render_export_form(frame: &mut Frame, app: &App) {
 
     // Filename field (always present)
     let filename_display = format!("{}{}", app.export_filename, ext);
-    let mut fields: Vec<FormField> = vec![
-        FormField {
-            label: "  File:    ",
-            value: &filename_display,
-            placeholder: "(enter filename)",
-            idx: 0,
-        },
-    ];
+    let mut fields: Vec<FormField> = vec![FormField {
+        label: "  File:    ",
+        value: &filename_display,
+        placeholder: "(enter filename)",
+        idx: 0,
+    }];
 
     // .fob metadata fields
     if is_fob {
@@ -599,26 +621,20 @@ fn render_export_form(frame: &mut Frame, app: &App) {
 
     for field in &fields {
         let label_s = style_for(field.idx);
-        let display_val = if field.value.is_empty() {
-            field.placeholder
+        let mut spans = vec![Span::styled(field.label, label_s)];
+
+        if field.value.is_empty() {
+            if field.idx == current_idx {
+                spans.push(cursor.clone());
+                spans.push(Span::styled(format!(" {}", field.placeholder), dim_style));
+            } else {
+                spans.push(Span::styled(field.placeholder.to_string(), dim_style));
+            }
         } else {
-            field.value
-        };
-
-        let val_s = if field.value.is_empty() && field.idx != current_idx {
-            dim_style
-        } else {
-            value_style
-        };
-
-        let mut spans = vec![
-            Span::styled(field.label, label_s),
-            Span::styled(display_val.to_string(), val_s),
-        ];
-
-        // Show cursor on active field
-        if field.idx == current_idx {
-            spans.push(cursor.clone());
+            spans.push(Span::styled(field.value.to_string(), value_style));
+            if field.idx == current_idx {
+                spans.push(cursor.clone());
+            }
         }
 
         // Show checkmark for completed fields with values
@@ -633,11 +649,7 @@ fn render_export_form(frame: &mut Frame, app: &App) {
 
     // Progress indicator
     let total_fields = fields.len();
-    let progress = format!(
-        "  Step {}/{}",
-        current_idx + 1,
-        total_fields,
-    );
+    let progress = format!("  Step {}/{}", current_idx + 1, total_fields,);
     let hint = if current_idx == total_fields - 1 {
         "  Enter: Save & Export | Esc: Cancel"
     } else {
@@ -681,7 +693,7 @@ fn render_capture_meta_form(frame: &mut Frame, app: &App) {
     let dim_style = Style::default().fg(Color::DarkGray);
     let accent_style = Style::default().fg(Color::Yellow);
     let cursor = Span::styled(
-        "_",
+        "█",
         Style::default()
             .fg(Color::Cyan)
             .add_modifier(Modifier::SLOW_BLINK),
@@ -784,22 +796,19 @@ fn render_capture_meta_form(frame: &mut Frame, app: &App) {
 
     for field in &fields {
         let label_s = style_for(field.idx);
-        let display_val = if field.value.is_empty() {
-            field.placeholder
+        let mut spans = vec![Span::styled(field.label, label_s)];
+        if field.value.is_empty() {
+            if field.idx == current_idx {
+                spans.push(cursor.clone());
+                spans.push(Span::styled(format!(" {}", field.placeholder), dim_style));
+            } else {
+                spans.push(Span::styled(field.placeholder.to_string(), dim_style));
+            }
         } else {
-            field.value
-        };
-        let val_s = if field.value.is_empty() && field.idx != current_idx {
-            dim_style
-        } else {
-            value_style
-        };
-        let mut spans = vec![
-            Span::styled(field.label, label_s),
-            Span::styled(display_val.to_string(), val_s),
-        ];
-        if field.idx == current_idx {
-            spans.push(cursor.clone());
+            spans.push(Span::styled(field.value.to_string(), value_style));
+            if field.idx == current_idx {
+                spans.push(cursor.clone());
+            }
         }
         if field.idx < current_idx && !field.value.is_empty() {
             spans.push(Span::styled(" ✓", done_style));
@@ -808,7 +817,10 @@ fn render_capture_meta_form(frame: &mut Frame, app: &App) {
     }
 
     lines.push(Line::from(""));
-    let progress = format!("  Step {}/4 — Used for vuln lookup and .fob export", current_idx + 1);
+    let progress = format!(
+        "  Step {}/4 — Used for vuln lookup and .fob export",
+        current_idx + 1
+    );
     lines.push(Line::from(Span::styled(progress, dim_style)));
 
     let block = Block::default()
