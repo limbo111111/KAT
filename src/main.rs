@@ -21,6 +21,7 @@ use crossterm::{
 };
 use ratatui::{backend::CrosstermBackend, Terminal};
 use std::io::{self, Write};
+use std::os::unix::io::FromRawFd;
 use std::panic;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -33,20 +34,32 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 fn restore_terminal_panic() {
     // Disable raw mode first
     let _ = disable_raw_mode();
-    
+
     // Write escape sequences directly to stdout
     let mut stdout = io::stdout();
-    
+
     // Leave alternate screen: ESC [ ? 1049 l
     let _ = stdout.write_all(b"\x1b[?1049l");
-    
+
     // Show cursor: ESC [ ? 25 h
     let _ = stdout.write_all(b"\x1b[?25h");
-    
+
     let _ = stdout.flush();
 }
 
 fn main() -> Result<()> {
+    // Read optional USB FD from Termux
+    let usb_fd_device = if let Ok(fd_str) = std::env::var("TERMUX_USB_FD") {
+        if let Ok(fd) = fd_str.parse::<std::os::fd::RawFd>() {
+            let owned_fd = unsafe { std::os::fd::OwnedFd::from_raw_fd(fd) };
+            nusb::Device::from_fd(owned_fd).ok()
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
     // Check if we have a TTY first
     if !atty::is(atty::Stream::Stdout) {
         eprintln!("Error: KAT requires a terminal (TTY) to run.");
@@ -65,12 +78,12 @@ fn main() -> Result<()> {
     let log_file = crate::storage::resolve_config_dir()
         .unwrap_or_else(|| std::path::PathBuf::from(".").join("KAT"))
         .join("kat.log");
-    
+
     // Create log directory if needed
     if let Some(parent) = log_file.parent() {
         let _ = std::fs::create_dir_all(parent);
     }
-    
+
     // Set up file-based logging
     if let Ok(file) = std::fs::File::create(&log_file) {
         tracing_subscriber::registry()
@@ -97,7 +110,7 @@ fn main() -> Result<()> {
     let mut terminal = Terminal::new(backend)?;
 
     // Create app and run
-    let mut app = App::new()?;
+    let mut app = App::new(usb_fd_device)?;
     let res = run_app(&mut terminal, &mut app);
 
     // Restore terminal properly using the terminal's backend

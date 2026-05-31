@@ -1,10 +1,10 @@
 //! HackRF device control.
 //!
 //! This module provides a high-level interface for controlling HackRF devices
-//! using the `libhackrf` crate. Falls back to demo mode at runtime if no
+//! using the `waverave_hackrf` crate. Falls back to demo mode at runtime if no
 //! HackRF hardware is detected.
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use std::sync::mpsc::Sender;
 use std::sync::{
     atomic::{AtomicBool, AtomicU32, Ordering},
@@ -18,6 +18,8 @@ use crate::capture::{Capture, RfModulation, StoredLevelDuration};
 use super::demodulator::Demodulator;
 use super::demodulator::FmDemodulator;
 use super::demodulator::LevelDuration;
+
+use waverave_hackrf::{HackRf, open_hackrf};
 
 /// Sample rate for HackRF (2 MHz is good for keyfob signals)
 const SAMPLE_RATE: u32 = 2_000_000;
@@ -33,8 +35,8 @@ struct GainSettings {
 impl Default for GainSettings {
     fn default() -> Self {
         Self {
-            lna_gain: 24,
-            vga_gain: 20,
+            lna_gain: 32,
+            vga_gain: 32,
             amp_enabled: false,
         }
     }
@@ -60,16 +62,18 @@ pub struct HackRfController {
     gain_settings: Arc<Mutex<GainSettings>>,
     /// RSSI (f32 bits) written by RX callback, read by UI - never blocks
     rssi_value: Arc<AtomicU32>,
+    /// The USB FD device (if running in Termux)
+    usb_fd_device: Option<nusb::Device>,
 }
 
 impl HackRfController {
     /// Create a new HackRF controller
-    pub fn new(event_tx: Sender<RadioEvent>) -> Result<Self> {
+    pub fn new(event_tx: Sender<RadioEvent>, usb_fd_device: Option<nusb::Device>) -> Result<Self> {
         let demodulator_am = Demodulator::new(SAMPLE_RATE);
         let demodulator_fm = FmDemodulator::new(SAMPLE_RATE);
 
         // Check if HackRF is available
-        let hackrf_available = check_hackrf_available();
+        let hackrf_available = check_hackrf_available(usb_fd_device.as_ref());
 
         if hackrf_available {
             tracing::info!("HackRF device detected");
@@ -87,6 +91,7 @@ impl HackRfController {
             hackrf_available,
             gain_settings: Arc::new(Mutex::new(GainSettings::default())),
             rssi_value: Arc::new(AtomicU32::new(0)),
+            usb_fd_device,
         })
     }
 
@@ -123,6 +128,7 @@ impl HackRfController {
         let hackrf_available = self.hackrf_available;
         let gain_settings = self.gain_settings.clone();
         let rssi_value = self.rssi_value.clone();
+        let usb_fd_device = self.usb_fd_device.clone();
 
         self.rx_thread = Some(thread::spawn(move || {
             if hackrf_available {
@@ -134,6 +140,7 @@ impl HackRfController {
                     demodulator_fm,
                     gain_settings,
                     rssi_value,
+                    usb_fd_device,
                 )
                 {
                     let _ = event_tx.send(RadioEvent::Error(format!("Receiver error: {}", e)));
@@ -159,64 +166,44 @@ impl HackRfController {
         Ok(())
     }
 
-    /// Set the receive frequency
-    pub fn set_frequency(&mut self, frequency: u32) -> Result<()> {
-        *self.frequency.lock().unwrap() = frequency;
-        tracing::info!("Set frequency to {} Hz", frequency);
-        Ok(())
-    }
-
     /// Transmit a signal
-    pub fn transmit(&mut self, signal: &[LevelDuration], frequency: u32) -> Result<()> {
+    pub fn transmit(&self, signal: &[LevelDuration], frequency: u32) -> Result<()> {
         if !self.hackrf_available {
-            tracing::warn!("HackRF not available - simulating transmission");
+            tracing::warn!("Cannot transmit: HackRF not available (demo mode)");
             return Ok(());
         }
 
-        // Stop receiving first if we are
-        let was_receiving = self.receiving.load(Ordering::SeqCst);
-        if was_receiving {
-            self.stop_receiving()?;
-        }
+        let _was_receiving = self.receiving.load(Ordering::SeqCst);
 
-        tracing::info!(
-            "Transmitting {} level/duration pairs at {} Hz",
-            signal.len(),
-            frequency
-        );
-
-        transmit_signal_hackrf(signal, frequency)?;
-
-        // Resume receiving if we were before
-        if was_receiving {
-            let freq = *self.frequency.lock().unwrap();
-            self.start_receiving(freq)?;
-        }
+        transmit_signal_hackrf(signal, frequency, self.usb_fd_device.as_ref())?;
 
         Ok(())
     }
 
-    /// Set LNA gain (0-40 dB, 8 dB steps)
+    /// Update frequency (can be done live)
+    pub fn set_frequency(&mut self, frequency: u32) -> Result<()> {
+        *self.frequency.lock().unwrap() = frequency;
+        Ok(())
+    }
+
+    /// Update LNA gain live
     pub fn set_lna_gain(&mut self, gain: u32) -> Result<()> {
-        tracing::info!("Set LNA gain to {} dB", gain);
         if let Ok(mut settings) = self.gain_settings.lock() {
             settings.lna_gain = gain;
         }
         Ok(())
     }
 
-    /// Set VGA gain (0-62 dB, 2 dB steps)
+    /// Update VGA gain live
     pub fn set_vga_gain(&mut self, gain: u32) -> Result<()> {
-        tracing::info!("Set VGA gain to {} dB", gain);
         if let Ok(mut settings) = self.gain_settings.lock() {
             settings.vga_gain = gain;
         }
         Ok(())
     }
 
-    /// Enable/disable the RF amplifier
+    /// Update AMP enable live
     pub fn set_amp_enable(&mut self, enabled: bool) -> Result<()> {
-        tracing::info!("Set amp enable to {}", enabled);
         if let Ok(mut settings) = self.gain_settings.lock() {
             settings.amp_enabled = enabled;
         }
@@ -233,17 +220,24 @@ impl Drop for HackRfController {
     }
 }
 
+/// Open HackRf either from the FD device or by scanning.
+fn open_device(usb_fd_device: Option<&nusb::Device>) -> Result<HackRf> {
+    if let Some(dev) = usb_fd_device {
+        HackRf::from_nusb_device(dev.clone(), 0, waverave_hackrf::HackRfType::One).map_err(|e| anyhow::anyhow!(e))
+    } else {
+        open_hackrf().map_err(|e| anyhow::anyhow!(e))
+    }
+}
+
 /// Check if HackRF is available
-fn check_hackrf_available() -> bool {
-    // Try to open a HackRF device
-    match libhackrf::HackRf::open() {
+fn check_hackrf_available(usb_fd_device: Option<&nusb::Device>) -> bool {
+    match open_device(usb_fd_device) {
         Ok(_) => {
             tracing::debug!("HackRF opened successfully");
             true
         }
         Err(e) => {
             tracing::debug!("HackRF not available: {:?}", e);
-            // Fallback: check via hackrf_info command
             match std::process::Command::new("hackrf_info")
                 .stdout(std::process::Stdio::null())
                 .stderr(std::process::Stdio::null())
@@ -271,18 +265,6 @@ fn run_demo_receiver(
     tracing::info!("Demo receiver thread stopped");
 }
 
-/// Shared state for RX callback (libhackrf requires fn pointers, not closures)
-struct RxState {
-    receiving: Arc<AtomicBool>,
-    event_tx: Sender<RadioEvent>,
-    frequency: Arc<Mutex<u32>>,
-    demodulator_am: Arc<Mutex<Demodulator>>,
-    demodulator_fm: Arc<Mutex<FmDemodulator>>,
-    capture_id: std::sync::atomic::AtomicU32,
-    /// RSSI (f32 bits) written here so callback never blocks on channel
-    rssi_value: Arc<AtomicU32>,
-}
-
 fn pairs_to_stored(pairs: &[LevelDuration]) -> Vec<StoredLevelDuration> {
     pairs
         .iter()
@@ -293,7 +275,7 @@ fn pairs_to_stored(pairs: &[LevelDuration]) -> Vec<StoredLevelDuration> {
         .collect()
 }
 
-/// Compute average magnitude of IQ buffer (0..~1 for i8)
+/// Compute average magnitude of IQ buffer
 fn compute_rssi(buffer: &[num_complex::Complex<i8>]) -> f32 {
     if buffer.is_empty() {
         return 0.0;
@@ -309,51 +291,47 @@ fn compute_rssi(buffer: &[num_complex::Complex<i8>]) -> f32 {
     sum_mag / buffer.len() as f32
 }
 
-/// RX callback: feed same IQ to AM and FM demodulators; emit a capture per path when signal complete.
-fn rx_callback(
-    _hackrf: &libhackrf::HackRf,
+/// Process a buffer of samples
+fn process_samples(
     buffer: &[num_complex::Complex<i8>],
-    user_data: &dyn std::any::Any,
+    current_freq: u32,
+    rssi_value: &Arc<AtomicU32>,
+    demodulator_am: &Arc<Mutex<Demodulator>>,
+    demodulator_fm: &Arc<Mutex<FmDemodulator>>,
+    capture_id: &std::sync::atomic::AtomicU32,
+    event_tx: &Sender<RadioEvent>,
 ) {
-    let state = match user_data.downcast_ref::<RxState>() {
-        Some(s) => s,
-        None => return,
-    };
-    if !state.receiving.load(Ordering::SeqCst) {
-        return;
-    }
-    let current_freq = *state.frequency.lock().unwrap();
+    rssi_value.store(compute_rssi(buffer).to_bits(), Ordering::Relaxed);
+
     let samples: Vec<i8> = buffer.iter().flat_map(|c| [c.re, c.im]).collect();
 
-    state.rssi_value.store(compute_rssi(buffer).to_bits(), Ordering::Relaxed);
-
-    if let Ok(mut demod) = state.demodulator_am.lock() {
+    if let Ok(mut demod) = demodulator_am.lock() {
         if let Some(pairs) = demod.process_samples(&samples) {
-            let id = state.capture_id.fetch_add(1, Ordering::SeqCst);
+            let id = capture_id.fetch_add(1, Ordering::SeqCst);
             let capture = Capture::from_pairs_with_rf(
                 id,
                 current_freq,
                 pairs_to_stored(&pairs),
                 Some(RfModulation::AM),
             );
-            let _ = state.event_tx.send(RadioEvent::SignalCaptured(capture));
+            let _ = event_tx.send(RadioEvent::SignalCaptured(capture));
         }
     }
-    if let Ok(mut demod) = state.demodulator_fm.lock() {
+    if let Ok(mut demod) = demodulator_fm.lock() {
         if let Some(pairs) = demod.process_samples(&samples) {
-            let id = state.capture_id.fetch_add(1, Ordering::SeqCst);
+            let id = capture_id.fetch_add(1, Ordering::SeqCst);
             let capture = Capture::from_pairs_with_rf(
                 id,
                 current_freq,
                 pairs_to_stored(&pairs),
                 Some(RfModulation::FM),
             );
-            let _ = state.event_tx.send(RadioEvent::SignalCaptured(capture));
+            let _ = event_tx.send(RadioEvent::SignalCaptured(capture));
         }
     }
 }
 
-/// Run the receiver loop with actual HackRF using libhackrf
+/// Run the receiver loop with actual HackRF using waverave-hackrf
 fn run_receiver_hackrf(
     receiving: Arc<AtomicBool>,
     event_tx: Sender<RadioEvent>,
@@ -362,174 +340,145 @@ fn run_receiver_hackrf(
     demodulator_fm: Arc<Mutex<FmDemodulator>>,
     gain_settings: Arc<Mutex<GainSettings>>,
     rssi_value: Arc<AtomicU32>,
+    usb_fd_device: Option<nusb::Device>,
 ) -> Result<()> {
-    use anyhow::Context;
-
     tracing::info!("HackRF receiver thread starting...");
 
-    let hackrf = libhackrf::HackRf::open()
-        .context("Failed to open HackRF device")?;
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .context("Failed to build tokio runtime")?;
 
-    let freq = *frequency.lock().unwrap();
-    let initial_gains = *gain_settings.lock().unwrap();
-    tracing::info!(
-        "Configuring HackRF: freq={} Hz, sample_rate={} Hz, LNA={} dB, VGA={} dB, AMP={}",
-        freq, SAMPLE_RATE, initial_gains.lna_gain, initial_gains.vga_gain, initial_gains.amp_enabled
-    );
+    rt.block_on(async {
+        let hackrf = open_device(usb_fd_device.as_ref())
+            .context("Failed to open HackRF device")?;
 
-    hackrf.set_sample_rate(SAMPLE_RATE)
-        .context("Failed to set sample rate")?;
-    hackrf.set_freq(freq as u64)
-        .context("Failed to set frequency")?;
-    hackrf.set_lna_gain(initial_gains.lna_gain)
-        .context("Failed to set LNA gain")?;
-    hackrf.set_rxvga_gain(initial_gains.vga_gain)
-        .context("Failed to set RXVGA gain")?;
-    hackrf.set_amp_enable(initial_gains.amp_enabled)
-        .context("Failed to enable amp")?;
+        let freq = *frequency.lock().unwrap();
+        let initial_gains = *gain_settings.lock().unwrap();
+        tracing::info!(
+            "Configuring HackRF: freq={} Hz, sample_rate={} Hz, LNA={} dB, VGA={} dB, AMP={}",
+            freq, SAMPLE_RATE, initial_gains.lna_gain, initial_gains.vga_gain, initial_gains.amp_enabled
+        );
 
-    tracing::info!("HackRF configured, starting RX (AM + FM demodulators)...");
+        hackrf.set_sample_rate(SAMPLE_RATE as f64).await.context("Failed to set sample rate")?;
+        hackrf.set_freq(freq as u64).await.context("Failed to set frequency")?;
+        hackrf.set_lna_gain(initial_gains.lna_gain as u16).await.context("Failed to set LNA gain")?;
+        hackrf.set_vga_gain(initial_gains.vga_gain as u16).await.context("Failed to set RXVGA gain")?;
+        hackrf.set_amp_enable(initial_gains.amp_enabled).await.context("Failed to enable amp")?;
 
-    let state = RxState {
-        receiving: receiving.clone(),
-        event_tx: event_tx.clone(),
-        frequency: frequency.clone(),
-        demodulator_am,
-        demodulator_fm,
-        capture_id: std::sync::atomic::AtomicU32::new(0),
-        rssi_value,
-    };
+        tracing::info!("HackRF configured, starting RX (AM + FM demodulators)...");
 
+        let mut rx = hackrf.start_rx(8192).await.context("Failed to start RX")?;
 
-    // Start receiving
-    hackrf.start_rx(rx_callback, state)
-        .context("Failed to start RX")?;
+        let capture_id = std::sync::atomic::AtomicU32::new(0);
+        let mut applied = initial_gains;
 
-    // Track applied settings so we can detect changes
-    let mut applied = initial_gains;
-
-    // Wait until receiving is stopped, applying gain changes live
-    while receiving.load(Ordering::SeqCst) {
-        std::thread::sleep(std::time::Duration::from_millis(100));
-
-        // Check for gain/amp setting changes and apply them live
-        if let Ok(current) = gain_settings.lock() {
-            if current.lna_gain != applied.lna_gain {
-                if let Err(e) = hackrf.set_lna_gain(current.lna_gain) {
-                    tracing::warn!("Failed to set LNA gain to {}: {:?}", current.lna_gain, e);
-                } else {
-                    tracing::info!("Applied LNA gain: {} dB", current.lna_gain);
+        while receiving.load(Ordering::SeqCst) {
+            // Apply live gain settings
+            if let Ok(current) = gain_settings.lock() {
+                if current.lna_gain != applied.lna_gain {
                     applied.lna_gain = current.lna_gain;
                 }
-            }
-            if current.vga_gain != applied.vga_gain {
-                if let Err(e) = hackrf.set_rxvga_gain(current.vga_gain) {
-                    tracing::warn!("Failed to set VGA gain to {}: {:?}", current.vga_gain, e);
-                } else {
-                    tracing::info!("Applied VGA gain: {} dB", current.vga_gain);
+                if current.vga_gain != applied.vga_gain {
                     applied.vga_gain = current.vga_gain;
                 }
-            }
-            if current.amp_enabled != applied.amp_enabled {
-                if let Err(e) = hackrf.set_amp_enable(current.amp_enabled) {
-                    tracing::warn!("Failed to set amp to {}: {:?}", current.amp_enabled, e);
-                } else {
-                    tracing::info!("Applied amp: {}", if current.amp_enabled { "ON" } else { "OFF" });
+                if current.amp_enabled != applied.amp_enabled {
                     applied.amp_enabled = current.amp_enabled;
                 }
             }
-        }
-    }
 
-    // Stop receiving
-    hackrf.stop_rx().context("Failed to stop RX")?;
+            // Ensure we keep submitting buffers
+            while rx.pending() < 4 {
+                rx.submit();
+            }
+
+            // Await a buffer with timeout
+            let timeout = tokio::time::sleep(std::time::Duration::from_millis(50));
+            tokio::select! {
+                result = rx.next_complete() => {
+                    match result {
+                        Ok(buf) => {
+                            let data = buf.samples();
+
+                            process_samples(
+                                data,
+                                freq,
+                                &rssi_value,
+                                &demodulator_am,
+                                &demodulator_fm,
+                                &capture_id,
+                                &event_tx,
+                            );
+                        }
+                        Err(e) => {
+                            tracing::warn!("RX error: {:?}", e);
+                        }
+                    }
+                }
+                _ = timeout => {
+                    // Timeout hit, continue loop to check `receiving` flag
+                }
+            }
+        }
+
+        rx.stop().await.context("Failed to stop RX")?;
+        Ok::<(), anyhow::Error>(())
+    })?;
 
     tracing::info!("HackRF receiver thread stopped");
     Ok(())
 }
 
-/// Shared state for TX callback
-struct TxState {
-    samples: Vec<(i8, i8)>,
-    sample_index: std::sync::atomic::AtomicUsize,
-}
-
-/// TX callback function for libhackrf
-fn tx_callback(
-    _hackrf: &libhackrf::HackRf,
-    buffer: &mut [num_complex::Complex<i8>],
-    user_data: &dyn std::any::Any,
-) {
-    use num_complex::Complex;
-    
-    // Downcast user_data to our state
-    let state = match user_data.downcast_ref::<TxState>() {
-        Some(s) => s,
-        None => return,
-    };
-
-    let total = state.samples.len();
-    
-    for sample in buffer.iter_mut() {
-        let idx = state.sample_index.fetch_add(1, Ordering::SeqCst);
-        if idx < total {
-            let (i, q) = state.samples[idx];
-            *sample = Complex::new(i, q);
-        } else {
-            *sample = Complex::new(0, 0);
-        }
-    }
-}
-
 /// Transmit a signal via HackRF
-fn transmit_signal_hackrf(signal: &[LevelDuration], frequency: u32) -> Result<()> {
-    use anyhow::Context;
-
+fn transmit_signal_hackrf(signal: &[LevelDuration], frequency: u32, usb_fd_device: Option<&nusb::Device>) -> Result<()> {
     tracing::info!("Starting HackRF transmission at maximum power...");
 
-    // Open HackRF device
-    let hackrf = libhackrf::HackRf::open()
-        .context("Failed to open HackRF device")?;
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .context("Failed to build tokio runtime")?;
 
-    // Configure for TX with MAXIMUM POWER
-    hackrf.set_sample_rate(SAMPLE_RATE)
-        .context("Failed to set sample rate")?;
-    
-    hackrf.set_freq(frequency as u64)
-        .context("Failed to set frequency")?;
-    
-    // Set TX VGA gain to maximum (47 dB is the max for HackRF)
-    hackrf.set_txvga_gain(47)
-        .context("Failed to set TXVGA gain")?;
-    
-    // Enable the RF amplifier for +14dB additional gain
-    hackrf.set_amp_enable(true)
-        .context("Failed to enable amp")?;
+    rt.block_on(async {
+        let hackrf = open_device(usb_fd_device)
+            .context("Failed to open HackRF device")?;
 
-    // Generate TX samples
-    let tx_samples = generate_tx_samples(signal, SAMPLE_RATE);
-    let total_samples = tx_samples.len();
+        hackrf.set_sample_rate(SAMPLE_RATE as f64).await.context("Failed to set sample rate")?;
+        hackrf.set_freq(frequency as u64).await.context("Failed to set frequency")?;
+        hackrf.set_txvga_gain(47).await.context("Failed to set TXVGA gain")?;
+        hackrf.set_amp_enable(true).await.context("Failed to enable amp")?;
 
-    tracing::debug!("Generated {} TX samples", total_samples);
+        let tx_samples = generate_tx_samples(signal, SAMPLE_RATE);
+        let total_samples = tx_samples.len();
+        tracing::debug!("Generated {} TX samples", total_samples);
 
-    // Create state for callback
-    let state = TxState {
-        samples: tx_samples,
-        sample_index: std::sync::atomic::AtomicUsize::new(0),
-    };
+        let mut tx = hackrf.start_tx(8192).await.context("Failed to start TX")?;
 
-    // Start transmitting
-    hackrf.start_tx(tx_callback, state)
-        .context("Failed to start TX")?;
+        let mut buf_chunk = Vec::with_capacity(8192);
+        for &(i, q) in &tx_samples {
+            buf_chunk.push(num_complex::Complex::new(i, q));
+            if buf_chunk.len() == buf_chunk.capacity() {
+                let mut buf = tx.get_buffer();
+                buf.clear();
+                buf.extend_from_slice(&buf_chunk);
+                tx.submit(buf);
+                buf_chunk.clear();
+            }
+        }
 
-    // Wait for transmission to complete (check sample_index through a loop)
-    // We can't easily check completion with this API, so just wait based on expected time
-    let duration_us: u32 = signal.iter().map(|s| s.duration_us).sum();
-    let wait_ms = (duration_us / 1000).max(100);
-    std::thread::sleep(std::time::Duration::from_millis(wait_ms as u64 + 100));
+        if !buf_chunk.is_empty() {
+            let pad_len = buf_chunk.capacity() - buf_chunk.len();
+            for _ in 0..pad_len {
+                buf_chunk.push(num_complex::Complex::new(0, 0));
+            }
+            let mut buf = tx.get_buffer();
+            buf.clear();
+            buf.extend_from_slice(&buf_chunk);
+            tx.submit(buf);
+        }
 
-    // Stop transmitting
-    hackrf.stop_tx().context("Failed to stop TX")?;
+        tx.stop().await.context("Failed to stop TX")?;
+        Ok::<(), anyhow::Error>(())
+    })?;
 
     tracing::info!("Transmission complete");
     Ok(())
@@ -544,9 +493,8 @@ fn generate_tx_samples(signal: &[LevelDuration], sample_rate: u32) -> Vec<(i8, i
         let num_samples = (ld.duration_us as f64 * samples_per_us) as usize;
         let value: i8 = if ld.level { 127 } else { 0 };
 
-        // IQ samples
         for _ in 0..num_samples {
-            samples.push((value, 0)); // I, Q (Q=0 for OOK)
+            samples.push((value, 0));
         }
     }
 
