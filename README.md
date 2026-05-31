@@ -1,5 +1,9 @@
 
+ broken
+ ..
 
+wip
+ 
 A terminal-based RF signal analysis tool for capturing, decoding, and retransmitting signals. Built in Rust with a real-time TUI powered by `ratatui`.
 
 **Note:** Protocol decoders and encoders in this project are based on the excellent reference implementations from [ProtoPirate](https://protopirate.net/ProtoPirate/ProtoPirate) and [Flipper-ARF](https://github.com/limbo111111/Flipper-ARF).
