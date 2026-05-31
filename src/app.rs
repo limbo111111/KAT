@@ -393,7 +393,7 @@ pub struct App {
 
 impl App {
     /// Create a new application instance
-    pub fn new() -> Result<Self> {
+    pub fn new(usb_fd_device: Option<nusb::Device>) -> Result<Self> {
         let storage = Storage::new()?;
 
         // ── Load protocol encryption keys from embedded keystore ─────────
@@ -403,7 +403,7 @@ impl App {
         let (radio_event_tx, radio_event_rx) = mpsc::channel();
 
         // Try HackRF first, then RTL-SDR
-        let radio: Option<RadioDevice> = match HackRfController::new(radio_event_tx.clone()) {
+        let radio: Option<RadioDevice> = match HackRfController::new(radio_event_tx.clone(), usb_fd_device) {
             Ok(mut h) if h.is_available() => {
                 tracing::info!("HackRF initialized successfully");
                 let _ = h.set_lna_gain(storage.config.default_lna_gain);

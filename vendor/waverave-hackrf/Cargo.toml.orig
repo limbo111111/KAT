@@ -1,0 +1,31 @@
+[package]
+name = "waverave-hackrf"
+version = "0.1.2"
+authors = ["Scott Teal <scott@teals.org>"]
+edition = "2024"
+readme = "README.md"
+keywords = ["sdr", "hackrf"]
+homepage = "https://github.com/Cognoscan/waverave"
+repository = "https://github.com/Cognoscan/waverave"
+documentation = "https://docs.rs/waverave-hackrf"
+license = "MIT OR Apache-2.0"
+description = "HackRF backend in pure Rust"
+
+[dependencies]
+nusb = "0.1"
+thiserror = "2"
+bytemuck = { version = "1", features = ["derive"] }
+num-complex = "0.4"
+crossbeam-channel = "0.5"
+tracing = "0.1"
+
+[dev-dependencies]
+tokio = { version = "1", features = [
+    "rt-multi-thread",
+    "macros",
+    "signal",
+    "sync",
+    "fs",
+    "io-util",
+] }
+anyhow = "1"
