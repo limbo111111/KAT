@@ -64,6 +64,8 @@ pub struct HackRfController {
     rssi_value: Arc<AtomicU32>,
     /// The USB FD device (if running in Termux)
     usb_fd_device: Option<nusb::Device>,
+    /// Tokio runtime
+    rt: Arc<tokio::runtime::Runtime>,
 }
 
 impl HackRfController {
@@ -74,6 +76,11 @@ impl HackRfController {
 
         // Check if HackRF is available
         let hackrf_available = check_hackrf_available(usb_fd_device.as_ref());
+        let rt = Arc::new(
+            tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()?,
+        );
 
         if hackrf_available {
             tracing::info!("HackRF device detected");
@@ -92,6 +99,7 @@ impl HackRfController {
             gain_settings: Arc::new(Mutex::new(GainSettings::default())),
             rssi_value: Arc::new(AtomicU32::new(0)),
             usb_fd_device,
+            rt,
         })
     }
 
@@ -129,6 +137,7 @@ impl HackRfController {
         let gain_settings = self.gain_settings.clone();
         let rssi_value = self.rssi_value.clone();
         let usb_fd_device = self.usb_fd_device.clone();
+        let rt = self.rt.clone();
 
         self.rx_thread = Some(thread::spawn(move || {
             if hackrf_available {
@@ -141,6 +150,7 @@ impl HackRfController {
                     gain_settings,
                     rssi_value,
                     usb_fd_device,
+                    rt,
                 )
                 {
                     let _ = event_tx.send(RadioEvent::Error(format!("Receiver error: {}", e)));
@@ -167,15 +177,23 @@ impl HackRfController {
     }
 
     /// Transmit a signal
-    pub fn transmit(&self, signal: &[LevelDuration], frequency: u32) -> Result<()> {
+    pub fn transmit(&mut self, signal: &[LevelDuration], frequency: u32) -> Result<()> {
         if !self.hackrf_available {
             tracing::warn!("Cannot transmit: HackRF not available (demo mode)");
             return Ok(());
         }
 
-        let _was_receiving = self.receiving.load(Ordering::SeqCst);
+        let was_receiving = self.receiving.load(Ordering::SeqCst);
+        if was_receiving {
+            self.stop_receiving()?;
+        }
 
-        transmit_signal_hackrf(signal, frequency, self.usb_fd_device.as_ref())?;
+        transmit_signal_hackrf(signal, frequency, self.usb_fd_device.as_ref(), self.rt.clone())?;
+
+        if was_receiving {
+            let orig_freq = *self.frequency.lock().unwrap();
+            self.start_receiving(orig_freq)?;
+        }
 
         Ok(())
     }
@@ -341,13 +359,9 @@ fn run_receiver_hackrf(
     gain_settings: Arc<Mutex<GainSettings>>,
     rssi_value: Arc<AtomicU32>,
     usb_fd_device: Option<nusb::Device>,
+    rt: Arc<tokio::runtime::Runtime>,
 ) -> Result<()> {
     tracing::info!("HackRF receiver thread starting...");
-
-    let rt = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .context("Failed to build tokio runtime")?;
 
     rt.block_on(async {
         let hackrf = open_device(usb_fd_device.as_ref())
@@ -376,14 +390,23 @@ fn run_receiver_hackrf(
         while receiving.load(Ordering::SeqCst) {
             // Apply live gain settings
             if let Ok(current) = gain_settings.lock() {
-                if current.lna_gain != applied.lna_gain {
-                    applied.lna_gain = current.lna_gain;
-                }
-                if current.vga_gain != applied.vga_gain {
-                    applied.vga_gain = current.vga_gain;
-                }
-                if current.amp_enabled != applied.amp_enabled {
-                    applied.amp_enabled = current.amp_enabled;
+                if current.lna_gain != applied.lna_gain || current.vga_gain != applied.vga_gain || current.amp_enabled != applied.amp_enabled {
+                    let mut hackrf = rx.stop().await.context("Failed to stop RX for gain change")?;
+
+                    if current.lna_gain != applied.lna_gain {
+                        hackrf.set_lna_gain(current.lna_gain as u16).await.context("Failed to set LNA gain")?;
+                        applied.lna_gain = current.lna_gain;
+                    }
+                    if current.vga_gain != applied.vga_gain {
+                        hackrf.set_vga_gain(current.vga_gain as u16).await.context("Failed to set RXVGA gain")?;
+                        applied.vga_gain = current.vga_gain;
+                    }
+                    if current.amp_enabled != applied.amp_enabled {
+                        hackrf.set_amp_enable(current.amp_enabled).await.context("Failed to enable amp")?;
+                        applied.amp_enabled = current.amp_enabled;
+                    }
+
+                    rx = hackrf.start_rx(8192).await.context("Failed to start RX")?;
                 }
             }
 
@@ -430,13 +453,8 @@ fn run_receiver_hackrf(
 }
 
 /// Transmit a signal via HackRF
-fn transmit_signal_hackrf(signal: &[LevelDuration], frequency: u32, usb_fd_device: Option<&nusb::Device>) -> Result<()> {
+fn transmit_signal_hackrf(signal: &[LevelDuration], frequency: u32, usb_fd_device: Option<&nusb::Device>, rt: Arc<tokio::runtime::Runtime>) -> Result<()> {
     tracing::info!("Starting HackRF transmission at maximum power...");
-
-    let rt = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .context("Failed to build tokio runtime")?;
 
     rt.block_on(async {
         let hackrf = open_device(usb_fd_device)
@@ -474,6 +492,11 @@ fn transmit_signal_hackrf(signal: &[LevelDuration], frequency: u32, usb_fd_devic
             buf.clear();
             buf.extend_from_slice(&buf_chunk);
             tx.submit(buf);
+        }
+
+        tx.flush();
+        while tx.pending() > 0 {
+            tx.next_complete().await.context("Error waiting for tx buffer to complete")?;
         }
 
         tx.stop().await.context("Failed to stop TX")?;

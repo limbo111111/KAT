@@ -21,6 +21,7 @@ use crossterm::{
 };
 use ratatui::{backend::CrosstermBackend, Terminal};
 use std::io::{self, Write};
+#[cfg(unix)]
 use std::os::unix::io::FromRawFd;
 use std::panic;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -51,7 +52,10 @@ fn main() -> Result<()> {
     // Read optional USB FD from Termux
     let usb_fd_device = if let Ok(fd_str) = std::env::var("TERMUX_USB_FD") {
         if let Ok(fd) = fd_str.parse::<std::os::fd::RawFd>() {
+            #[cfg(unix)]
             let owned_fd = unsafe { std::os::fd::OwnedFd::from_raw_fd(fd) };
+            #[cfg(not(unix))]
+            let owned_fd = panic!("TERMUX_USB_FD is only supported on Unix systems");
             nusb::Device::from_fd(owned_fd).ok()
         } else {
             None
