@@ -65,11 +65,8 @@ fn main() -> Result<()> {
     };
 
     // Check if we have a TTY first
-    if !atty::is(atty::Stream::Stdout) {
-        eprintln!("Error: KAT requires a terminal (TTY) to run.");
-        eprintln!("Please run this program in a real terminal, not via a script or IDE runner.");
-        std::process::exit(1);
-    }
+    
+    
 
     // Set up panic hook to restore terminal on panic
     let default_panic = panic::take_hook();
