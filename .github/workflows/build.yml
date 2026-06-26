@@ -14,7 +14,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
 
     steps:
     - uses: actions/checkout@v4
@@ -29,11 +29,32 @@ jobs:
       if: matrix.os == 'macos-latest'
       run: brew install hackrf pkg-config
 
+    - name: Install dependencies (Windows)
+      if: matrix.os == 'windows-latest'
+      shell: pwsh
+      run: |
+        # Download prebuilt PothosSDR which contains libusb and hackrf DLLs/LIBs
+        Invoke-WebRequest -Uri "https://downloads.myriadrf.org/builds/PothosSDR/PothosSDR-2021.07.25-vc16-x64.exe" -OutFile "PothosSDR.exe"
+        # Extract it using 7z
+        7z x PothosSDR.exe -o"pothossdr"
+        # Move lib files to somewhere we can link against
+        New-Item -ItemType Directory -Force -Path "lib"
+        Copy-Item "pothossdr/lib/hackrf.lib" -Destination "lib/"
+        Copy-Item "pothossdr/lib/libusb-1.0.lib" -Destination "lib/"
+
+        New-Item -ItemType Directory -Force -Path "target/release"
+        Copy-Item "pothossdr/bin/hackrf.dll" -Destination "target/release/"
+        Copy-Item "pothossdr/bin/libusb-1.0.dll" -Destination "target/release/"
+        # Tell cargo where to find libraries
+        echo "LIB=$((Get-Location).Path)\lib;$env:LIB" | Out-File -FilePath $env:GITHUB_ENV -Append
+
     - name: Set up Rust
       uses: dtolnay/rust-toolchain@stable
 
     - name: Build
       run: cargo build --release
+      env:
+        RUSTFLAGS: ${{ matrix.os == 'windows-latest' && '-L native=lib' || '' }}
 
     - name: Upload artifact (Linux)
       if: matrix.os == 'ubuntu-latest'
@@ -49,4 +70,15 @@ jobs:
       with:
         name: kat-macos
         path: target/release/kat
+        retention-days: 7
+
+    - name: Upload artifact (Windows)
+      if: matrix.os == 'windows-latest'
+      uses: actions/upload-artifact@v4
+      with:
+        name: kat-windows
+        path: |
+          target/release/kat.exe
+          target/release/hackrf.dll
+          target/release/libusb-1.0.dll
         retention-days: 7
