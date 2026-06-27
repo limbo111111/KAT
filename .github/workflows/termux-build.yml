@@ -1,0 +1,62 @@
+name: Termux Android Build
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  build-termux:
+    name: Build for Termux (aarch64-linux-android)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libusb-1.0-0-dev
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r26b
+
+      - name: Build for aarch64-linux-android
+        run: cargo ndk -t arm64-v8a -p 24 build --release
+
+      - name: Create Deb Package Structure
+        run: |
+          mkdir -p termux-pkg/data/data/com.termux/files/usr/bin
+          cp target/aarch64-linux-android/release/kat termux-pkg/data/data/com.termux/files/usr/bin/
+          chmod +x termux-pkg/data/data/com.termux/files/usr/bin/kat
+
+          mkdir -p termux-pkg/DEBIAN
+          cat << DEB_EOF > termux-pkg/DEBIAN/control
+          Package: kat
+          Version: 1.2.0
+          Architecture: aarch64
+          Maintainer: KAT Team
+          Description: Keyfob Analysis Toolkit - HackRF/RTL-SDR signal capture
+          DEB_EOF
+
+      - name: Build Deb Package
+        run: dpkg-deb --build termux-pkg kat-termux-aarch64.deb
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kat-termux-aarch64-deb
+          path: kat-termux-aarch64.deb
