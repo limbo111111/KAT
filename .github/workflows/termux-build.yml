@@ -35,7 +35,7 @@ jobs:
           ndk-version: r26b
 
       - name: Build for aarch64-linux-android
-        run: cargo ndk -t arm64-v8a -p 24 build --release
+        run: cargo ndk -t arm64-v8a -P 24 build --release
 
       - name: Create Deb Package Structure
         run: |
